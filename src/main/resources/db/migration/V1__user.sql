@@ -96,3 +96,18 @@ CREATE TABLE IF NOT EXISTS order_items (
     INDEX idx_orderitem_order (order_id),
     CONSTRAINT fk_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
     );
+
+CREATE TABLE IF NOT EXISTS payments (
+                                        id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                                        order_id BIGINT NOT NULL,
+                                        user_email VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    reference VARCHAR(64) NOT NULL UNIQUE,
+    amount DOUBLE NOT NULL,
+    receipt_url VARCHAR(500),
+    admin_note VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_payment_order (order_id),
+    INDEX idx_payment_user (user_email)
+    );
