@@ -71,3 +71,28 @@ CREATE TABLE IF NOT EXISTS cart_items (
     CONSTRAINT fk_cart FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE
     );
 
+CREATE TABLE IF NOT EXISTS orders (
+                                      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                                      user_email VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    total DOUBLE NOT NULL,
+    shipping_address VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_order_user (user_email)
+    );
+
+CREATE TABLE IF NOT EXISTS order_items (
+                                           id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                                           order_id BIGINT NOT NULL,
+                                           product_id BIGINT NOT NULL,
+                                           sku VARCHAR(64) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price DOUBLE NOT NULL,
+    quantity INT NOT NULL,
+    line_total DOUBLE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_orderitem_order (order_id),
+    CONSTRAINT fk_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
