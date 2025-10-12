@@ -14,22 +14,17 @@ export default function Login() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
+    setError(null); setLoading(true);
     try {
       const { token } = await loginApi(email, password);
-      setAuth(token, "CUSTOMER"); // parse role later from JWT if needed
+      // Role parsing optional; keep as CUSTOMER for now
+      setAuth(token, "CUSTOMER");
       nav("/");
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.response?.data?.error ||
-        e?.message ||
-        "Login failed";
+      const status = e?.response?.status; const body = e?.response?.data;
+      const msg = body?.message || body?.error || (status ? `HTTP ${status}` : e?.message || "Network Error");
       setError(msg);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
@@ -37,17 +32,12 @@ export default function Login() {
       <Card sx={{ width: 420, p: 1 }}>
         <CardContent>
           <Typography variant="h5" gutterBottom>Welcome back</Typography>
-        <Typography variant="body2" sx={{ mb: 2, opacity: 0.8 }}>
-            Sign in to continue shopping.
-          </Typography>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <form onSubmit={submit}>
             <Stack spacing={2}>
               <TextField label="Email" type="email" value={email} onChange={(e)=>setEmail(e.target.value)} required fullWidth />
               <TextField label="Password" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} required fullWidth />
-              <Button type="submit" variant="contained" fullWidth disabled={loading}>
-                {loading ? "Signing in..." : "Login"}
-              </Button>
+              <Button type="submit" variant="contained" fullWidth disabled={loading}>{loading ? "Signing in..." : "Login"}</Button>
               <Typography variant="body2" sx={{ textAlign: "center" }}>
                 New here? <Link to="/register">Create an account</Link>
               </Typography>

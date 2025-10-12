@@ -19,16 +19,14 @@ export default function Register() {
     setError(null);
     setLoading(true);
     try {
-      const payload = { email, password, fullName, role };
+      const payload = { email, password, fullName, role: role.toUpperCase() };
       const { token } = await registerApi(payload);
-      setAuth(token, role as any);
+      setAuth(token, role.toUpperCase());
       nav("/");
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.response?.data?.error ||
-        e?.message ||
-        "Registration failed";
+      const status = e?.response?.status;
+      const body = e?.response?.data;
+      const msg = body?.message || body?.error || (status ? `HTTP ${status}` : e?.message || "Network Error");
       setError(msg);
     } finally {
       setLoading(false);
@@ -40,9 +38,7 @@ export default function Register() {
       <Card sx={{ width: 520, p: 1 }}>
         <CardContent>
           <Typography variant="h5" gutterBottom>Create account</Typography>
-          <Typography variant="body2" sx={{ mb: 2, opacity: 0.8 }}>
-            Join and start exploring products.
-          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, opacity: 0.8 }}>Join and start exploring products.</Typography>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <form onSubmit={submit}>
             <Stack spacing={2}>
@@ -53,9 +49,7 @@ export default function Register() {
                 <MenuItem value="CUSTOMER">Customer</MenuItem>
                 <MenuItem value="VENDOR">Vendor</MenuItem>
               </TextField>
-              <Button type="submit" variant="contained" fullWidth disabled={loading}>
-                {loading ? "Creating..." : "Create account"}
-              </Button>
+              <Button type="submit" variant="contained" fullWidth disabled={loading}>{loading ? "Creating..." : "Create account"}</Button>
               <Typography variant="body2" sx={{ textAlign: "center" }}>
                 Already have an account? <Link to="/login">Sign in</Link>
               </Typography>
