@@ -9,35 +9,54 @@ const NavLink = ({ to, label }: { to: string; label: string }) => {
     <Button
       component={Link}
       to={to}
-      size="small"
-      variant={active ? "contained" : "text"}
-      color={active ? "secondary" : "inherit"}
-      sx={{ borderRadius: 999 }}
+      sx={{
+        color: active ? "white" : "rgba(255,255,255,0.8)",
+        fontWeight: active ? 600 : 400,
+        textTransform: "none",
+        fontSize: "1rem",
+        px: 2,
+        borderBottom: active ? "3px solid white" : "3px solid transparent",
+        borderRadius: 0,
+        "&:hover": {
+          bgcolor: "rgba(255,255,255,0.1)",
+        },
+      }}
     >
       {label}
     </Button>
   );
 };
 
-// simple helpers
-const isAdmin = (role?: string | null) => role?.toUpperCase() === "ADMIN";
-const isVendor = (role?: string | null) => role?.toUpperCase() === "VENDOR";
-const isCustomer = (role?: string | null) =>
-  !role || role.toUpperCase() === "CUSTOMER";
-
 export default function AppLayout() {
-  const { token, role, logout } = useAuth();
-
+  const { token, logout } = useAuth();
+  
   return (
-    <Box>
-      <AppBar position="sticky" elevation={0} sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
-        <Toolbar sx={{ minHeight: 76 }}>
-          <Container maxWidth="lg" sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography variant="h5" sx={{ fontWeight: 800 }}>
-              <span className="gradient-text">MallX</span>
+    <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <AppBar 
+        position="sticky" 
+        elevation={0}
+        sx={{ 
+          background: 'linear-gradient(135deg, #16b3ac 0%, #7edfd9 100%)',
+        }}
+      >
+        <Container maxWidth="xl">
+          <Toolbar disableGutters sx={{ minHeight: 64 }}>
+            <Typography
+              variant="h5"
+              component={Link}
+              to="/"
+              sx={{
+                mr: 4,
+                fontWeight: 700,
+                color: "white",
+                textDecoration: "none",
+                letterSpacing: 1,
+              }}
+            >
+              MallX
             </Typography>
-
-            <Stack direction="row" spacing={1} sx={{ ml: 2, flex: 1 }}>
+            
+            <Stack direction="row" spacing={0} sx={{ flexGrow: 1 }}>
               <NavLink to="/" label="Home" />
               <NavLink to="/products" label="Products" />
               <NavLink to="/categories" label="Categories" />
@@ -45,43 +64,60 @@ export default function AppLayout() {
               <NavLink to="/orders" label="Orders" />
               <NavLink to="/payments" label="Payments" />
               <NavLink to="/reviews" label="Reviews" />
-
-              {/* role-aware dashboard entries */}
-              {isAdmin(role) && <NavLink to="/dashboard/admin" label="Admin" />}
-              {isVendor(role) && <NavLink to="/dashboard/vendor" label="Vendor" />}
-              {isCustomer(role) && <NavLink to="/dashboard" label="Dashboard" />}
             </Stack>
-
+            
             <Stack direction="row" spacing={1}>
               {!token ? (
                 <>
-                  <Button component={Link} to="/login" color="inherit">
+                  <Button 
+                    component={Link} 
+                    to="/login" 
+                    sx={{ 
+                      color: "white",
+                      textTransform: "none",
+                    }}
+                  >
                     Login
                   </Button>
-                  <Button component={Link} to="/register" variant="contained">
+                  <Button 
+                    component={Link} 
+                    to="/register" 
+                    variant="outlined"
+                    sx={{ 
+                      color: "white",
+                      borderColor: "white",
+                      textTransform: "none",
+                      "&:hover": {
+                        borderColor: "white",
+                        bgcolor: "rgba(255,255,255,0.1)",
+                      },
+                    }}
+                  >
                     Sign up
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button component={Link} to="/profile" color="inherit">
-                    Profile
-                  </Button>
-                  <Button onClick={logout} variant="contained" color="secondary">
+                  <NavLink to="/profile" label="Profile" />
+                  <Button 
+                    onClick={logout} 
+                    sx={{ 
+                      color: "white",
+                      textTransform: "none",
+                    }}
+                  >
                     Logout
                   </Button>
                 </>
               )}
             </Stack>
-          </Container>
-        </Toolbar>
+          </Toolbar>
+        </Container>
       </AppBar>
-
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box className="glow" sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
-          <Outlet />
-        </Box>
-      </Container>
+      
+      <Box component="main" sx={{ flexGrow: 1 }}>
+        <Outlet />
+      </Box>
     </Box>
   );
 }

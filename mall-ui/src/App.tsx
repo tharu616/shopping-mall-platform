@@ -1,15 +1,18 @@
-import { CssBaseline, ThemeProvider, Container } from "@mui/material";
-import { makeAppTheme } from "./theme";
-import RoutesIndex from "./routes";
+import { CssBaseline, ThemeProvider } from '@mui/material';
+import { useEffect } from 'react';
+import RoutesIndex from './routes';
+import { makeAppTheme } from './theme';
+import { useCart } from './store/cartStore';
 
 export default function App() {
-  const theme = makeAppTheme("light");
+  const theme = makeAppTheme('light');
+  const refreshCart = useCart((s) => s.refresh);
+  useEffect(() => { refreshCart(); }, [refreshCart]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Container maxWidth="lg" sx={{ py: 0 }}>
-        <RoutesIndex />
-      </Container>
+      <RoutesIndex />
     </ThemeProvider>
   );
 }
