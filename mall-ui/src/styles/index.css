@@ -1,0 +1,16 @@
+html, body, #root { height: 100%; }
+* { scrollbar-width: thin; scrollbar-color: #7c3aed #111827; }
+*::-webkit-scrollbar { height: 10px; width: 10px; }
+*::-webkit-scrollbar-track { background: #0b1020; }
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #7c3aed, #06b6d4);
+  border-radius: 10px;
+}
+.glow { position: relative; }
+.glow::before {
+  content: ""; position: absolute; inset: -1px;
+  background: conic-gradient(from 180deg at 50% 50%, #7c3aed, #06b6d4, #0ea5e9, #22c55e, #7c3aed);
+  filter: blur(18px); opacity: .35; z-index: -1; border-radius: 18px;
+}
+.gradient-text { background: linear-gradient(90deg, #fff, #c7d2fe, #93c5fd, #a7f3d0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
