@@ -8,6 +8,8 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import ProductEdit from "./pages/ProductEdit";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import CartBadge from "./components/CartBadge";
 import Orders from "./pages/Orders";
 import Payments from "./pages/Payments";
 import VendorDashboard from "./pages/dashboard/VendorDashboard";
@@ -30,6 +32,7 @@ export default function App() {
                 <Route path="/products/:id" element={<ProductDetail />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/payments" element={<Payments />} />
                 <Route path="/dashboard/vendor" element={<VendorDashboard />} />
@@ -40,4 +43,5 @@ export default function App() {
             </Routes>
         </AppLayout>
     );
+    <Link to="/cart">Cart <CartBadge /></Link>
 }

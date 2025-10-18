@@ -32,6 +32,7 @@ export default function Register() {
             <select value={role} onChange={e=>setRole(e.target.value)}>
                 <option value="CUSTOMER">Customer</option>
                 <option value="VENDOR">Vendor</option>
+                <option value="ADMIN">Admin</option>
             </select>
             <button type="submit">Register</button>
             {msg && <div>{msg}</div>}
