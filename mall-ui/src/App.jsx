@@ -11,10 +11,14 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import CartBadge from "./components/CartBadge";
 import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
 import Payments from "./pages/Payments";
+import UploadPayment from "./pages/UploadPayment";
+import PaymentDetail from "./pages/PaymentDetail";
 import VendorDashboard from "./pages/dashboard/VendorDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import Discounts from "./pages/Discounts";
+import DiscountForm from "./pages/DiscountForm";
 import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 
@@ -34,10 +38,15 @@ export default function App() {
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/orders/:id" element={<OrderDetail />} />
                 <Route path="/payments" element={<Payments />} />
+                <Route path="/payments/upload" element={<UploadPayment />} />
+                <Route path="/payments/:id" element={<PaymentDetail />} />
                 <Route path="/dashboard/vendor" element={<VendorDashboard />} />
                 <Route path="/dashboard/admin" element={<AdminDashboard />} />
                 <Route path="/discounts" element={<Discounts />} />
+                <Route path="/discounts/create" element={<DiscountForm />} />
+                <Route path="/discounts/edit/:id" element={<DiscountForm />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
