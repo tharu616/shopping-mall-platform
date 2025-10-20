@@ -29,7 +29,6 @@ export default function VendorDashboard() {
             const products = productsRes.data;
             const orders = ordersRes.data;
             const discounts = discountsRes.data;
-
             const lowStock = products.filter(p => p.stock < 10);
 
             setStats({
@@ -40,8 +39,7 @@ export default function VendorDashboard() {
                 totalRevenue: orders.reduce((sum, o) => sum + o.total, 0),
                 activeDiscounts: discounts.filter(d => d.active).length
             });
-
-            setLowStockProducts(lowStock.slice(0, 5));
+            setLowStockProducts(lowStock);
         } catch (err) {
             console.error("Failed to load dashboard data", err);
         } finally {
@@ -49,140 +47,246 @@ export default function VendorDashboard() {
         }
     }
 
-    if (loading) return <div>Loading dashboard...</div>;
+    if (loading) {
+        return (
+            <div style={{
+                minHeight: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
+            }}>
+                <div style={{ color: "#666", fontSize: "20px", fontWeight: "700" }}>
+                    ⏳ Loading dashboard...
+                </div>
+            </div>
+        );
+    }
+
+    const statCards = [
+        { label: "Total Products", value: stats.totalProducts, icon: "📦", color: "linear-gradient(135deg, #4B368B, #2E2566)" },
+        { label: "Low Stock Alert", value: stats.lowStockProducts, icon: "⚠️", color: "linear-gradient(135deg, #FFA500, #FF8C00)" },
+        { label: "Total Orders", value: stats.totalOrders, icon: "🛒", color: "linear-gradient(135deg, #1E90FF, #4B368B)" },
+        { label: "Pending Orders", value: stats.pendingOrders, icon: "⏳", color: "linear-gradient(135deg, #9C27B0, #7B1FA2)" },
+        { label: "Total Revenue", value: `$${stats.totalRevenue.toFixed(2)}`, icon: "💰", color: "linear-gradient(135deg, #4CAF50, #45a049)" },
+        { label: "Active Discounts", value: stats.activeDiscounts, icon: "🏷️", color: "linear-gradient(135deg, #dc3545, #c82333)" }
+    ];
+
+    const quickActions = [
+        { label: "Add Product", icon: "➕", link: "/products/new", color: "#4CAF50" },
+        { label: "My Products", icon: "📦", link: "/products", color: "#4B368B" },
+        { label: "View Orders", icon: "🛒", link: "/orders", color: "#1E90FF" },
+        { label: "Discounts", icon: "🏷️", link: "/discounts", color: "#dc3545" }
+    ];
 
     return (
-        <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-            <h2>Vendor Dashboard</h2>
-            <p style={{ color: "#666", marginBottom: "30px" }}>Manage your inventory and orders.</p>
-
-            {/* Stats Grid */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "20px",
-                marginBottom: "30px"
-            }}>
-                <StatCard title="Total Products" value={stats.totalProducts} color="#007bff" icon="📦" link="/products" />
-                <StatCard title="Low Stock" value={stats.lowStockProducts} color="#dc3545" icon="⚠️" />
-                <StatCard title="Total Orders" value={stats.totalOrders} color="#28a745" icon="🛒" link="/orders" />
-                <StatCard title="Pending Orders" value={stats.pendingOrders} color="#ffc107" icon="⏳" link="/orders" />
-                <StatCard title="Total Revenue" value={`$${stats.totalRevenue.toFixed(2)}`} color="#6c757d" icon="💰" />
-                <StatCard title="Active Discounts" value={stats.activeDiscounts} color="#17a2b8" icon="🎫" link="/discounts" />
-            </div>
-
-            {/* Low Stock Alert */}
-            {stats.lowStockProducts > 0 && (
-                <div style={{
-                    backgroundColor: "#fff3cd",
-                    border: "2px solid #ffc107",
-                    borderRadius: "8px",
-                    padding: "20px",
-                    marginBottom: "30px"
-                }}>
-                    <h3 style={{ color: "#856404" }}>⚠️ Low Stock Alert</h3>
-                    <p>The following products are running low on stock:</p>
-                    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "15px" }}>
-                        <thead>
-                        <tr style={{ backgroundColor: "#fff" }}>
-                            <th style={{ padding: "10px", textAlign: "left" }}>Product</th>
-                            <th style={{ padding: "10px", textAlign: "center" }}>Stock</th>
-                            <th style={{ padding: "10px", textAlign: "center" }}>Action</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {lowStockProducts.map(product => (
-                            <tr key={product.id} style={{ borderTop: "1px solid #ffc107" }}>
-                                <td style={{ padding: "10px" }}>{product.name}</td>
-                                <td style={{ padding: "10px", textAlign: "center", fontWeight: "bold", color: "#dc3545" }}>
-                                    {product.stock}
-                                </td>
-                                <td style={{ padding: "10px", textAlign: "center" }}>
-                                    <Link to={`/products/${product.id}/edit`}>
-                                        <button style={{
-                                            padding: "6px 12px",
-                                            backgroundColor: "#007bff",
-                                            color: "white",
-                                            border: "none",
-                                            borderRadius: "4px",
-                                            cursor: "pointer"
-                                        }}>
-                                            Restock
-                                        </button>
-                                    </Link>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {/* Quick Actions */}
-            <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
-                <Link to="/products/create">
-                    <button style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#28a745",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer",
-                        fontWeight: "bold"
-                    }}>
-                        + Add Product
-                    </button>
-                </Link>
-                <Link to="/products">
-                    <button style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#007bff",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer",
-                        fontWeight: "bold"
-                    }}>
-                        Manage Products
-                    </button>
-                </Link>
-                <Link to="/orders">
-                    <button style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#6c757d",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer",
-                        fontWeight: "bold"
-                    }}>
-                        View Orders
-                    </button>
-                </Link>
-            </div>
-        </div>
-    );
-}
-
-function StatCard({ title, value, color, icon, link }) {
-    const card = (
         <div style={{
-            backgroundColor: "#fff",
-            border: `2px solid ${color}`,
-            borderRadius: "8px",
-            padding: "20px",
-            textAlign: "center",
-            cursor: link ? "pointer" : "default",
-            transition: "transform 0.2s"
-        }}
-             onMouseEnter={(e) => link && (e.currentTarget.style.transform = "scale(1.05)")}
-             onMouseLeave={(e) => link && (e.currentTarget.style.transform = "scale(1)")}
-        >
-            <div style={{ fontSize: "40px", marginBottom: "10px" }}>{icon}</div>
-            <div style={{ fontSize: "24px", fontWeight: "bold", color }}>{value}</div>
-            <div style={{ fontSize: "14px", color: "#666", marginTop: "5px" }}>{title}</div>
+            minHeight: "100vh",
+            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
+            padding: "60px 20px"
+        }}>
+            <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+                {/* Header */}
+                <div style={{ marginBottom: "40px", textAlign: "center" }}>
+                    <h1 style={{
+                        fontSize: "48px",
+                        fontWeight: "800",
+                        background: "linear-gradient(135deg, #4B368B, #2E2566)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        marginBottom: "8px"
+                    }}>
+                        🏪 Vendor Dashboard
+                    </h1>
+                    <p style={{ color: "#666", fontSize: "18px", fontWeight: "600" }}>
+                        Manage your store and inventory
+                    </p>
+                </div>
+
+                {/* Stats Grid */}
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                    gap: "24px",
+                    marginBottom: "40px"
+                }}>
+                    {statCards.map((stat, index) => (
+                        <div
+                            key={index}
+                            style={{
+                                background: "rgba(255, 255, 255, 0.8)",
+                                backdropFilter: "blur(20px)",
+                                WebkitBackdropFilter: "blur(20px)",
+                                border: "1px solid rgba(255,255,255,0.3)",
+                                borderRadius: "20px",
+                                padding: "28px",
+                                boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+                                transition: "all 0.3s"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "translateY(-8px)";
+                                e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.15)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.1)";
+                            }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div>
+                                    <p style={{
+                                        fontSize: "14px",
+                                        color: "#666",
+                                        fontWeight: "600",
+                                        marginBottom: "8px",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "1px"
+                                    }}>
+                                        {stat.label}
+                                    </p>
+                                    <h3 style={{
+                                        fontSize: "32px",
+                                        fontWeight: "800",
+                                        color: "#1A1A2E",
+                                        margin: 0
+                                    }}>
+                                        {stat.value}
+                                    </h3>
+                                </div>
+                                <div style={{
+                                    width: "60px",
+                                    height: "60px",
+                                    borderRadius: "16px",
+                                    background: stat.color,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "28px",
+                                    boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
+                                }}>
+                                    {stat.icon}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Low Stock Alert */}
+                {lowStockProducts.length > 0 && (
+                    <div style={{
+                        background: "rgba(255, 255, 255, 0.8)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        border: "2px solid #FFA50080",
+                        borderRadius: "24px",
+                        padding: "30px",
+                        boxShadow: "0 8px 32px rgba(255,165,0,0.2)",
+                        marginBottom: "30px"
+                    }}>
+                        <h2 style={{
+                            fontSize: "24px",
+                            fontWeight: "800",
+                            color: "#FFA500",
+                            marginBottom: "20px"
+                        }}>
+                            ⚠️ Low Stock Products
+                        </h2>
+                        <div style={{ display: "grid", gap: "12px" }}>
+                            {lowStockProducts.slice(0, 5).map((product, index) => (
+                                <div
+                                    key={index}
+                                    style={{
+                                        padding: "16px 20px",
+                                        background: "linear-gradient(135deg, rgba(255,165,0,0.1), rgba(255,140,0,0.15))",
+                                        borderRadius: "12px",
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center"
+                                    }}
+                                >
+                                    <span style={{ fontWeight: "700", color: "#1A1A2E" }}>
+                                        {product.name}
+                                    </span>
+                                    <span style={{
+                                        padding: "6px 12px",
+                                        background: "#FFA500",
+                                        color: "white",
+                                        borderRadius: "8px",
+                                        fontSize: "14px",
+                                        fontWeight: "700"
+                                    }}>
+                                        Stock: {product.stock}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Quick Actions */}
+                <div style={{
+                    background: "rgba(255, 255, 255, 0.8)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: "24px",
+                    padding: "40px",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
+                }}>
+                    <h2 style={{
+                        fontSize: "24px",
+                        fontWeight: "800",
+                        color: "#1A1A2E",
+                        marginBottom: "24px"
+                    }}>
+                        ⚡ Quick Actions
+                    </h2>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "16px"
+                    }}>
+                        {quickActions.map((action, index) => (
+                            <Link
+                                key={index}
+                                to={action.link}
+                                style={{
+                                    textDecoration: "none",
+                                    padding: "20px",
+                                    background: `linear-gradient(135deg, ${action.color}15, ${action.color}25)`,
+                                    borderRadius: "16px",
+                                    border: `2px solid ${action.color}40`,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: "12px",
+                                    transition: "all 0.3s"
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = "translateY(-4px)";
+                                    e.currentTarget.style.borderColor = action.color;
+                                    e.currentTarget.style.boxShadow = `0 8px 24px ${action.color}40`;
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.borderColor = `${action.color}40`;
+                                    e.currentTarget.style.boxShadow = "none";
+                                }}
+                            >
+                                <span style={{ fontSize: "36px" }}>{action.icon}</span>
+                                <span style={{
+                                    fontSize: "16px",
+                                    fontWeight: "700",
+                                    color: "#1A1A2E",
+                                    textAlign: "center"
+                                }}>
+                                    {action.label}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </div>
     );
-
-    return link ? <Link to={link} style={{ textDecoration: "none" }}>{card}</Link> : card;
 }

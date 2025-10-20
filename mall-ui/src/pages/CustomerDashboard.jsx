@@ -38,7 +38,6 @@ export default function CustomerDashboard() {
                 cartItems: cart.items?.length || 0,
                 pendingPayments: payments.filter(p => p.status === "PENDING").length
             });
-
             setRecentOrders(orders.slice(0, 5));
         } catch (err) {
             console.error("Failed to load dashboard data", err);
@@ -47,198 +46,259 @@ export default function CustomerDashboard() {
         }
     }
 
-    if (loading) return <div>Loading dashboard...</div>;
+    if (loading) {
+        return (
+            <div style={{
+                minHeight: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
+            }}>
+                <div style={{ color: "#666", fontSize: "20px", fontWeight: "700" }}>
+                    ⏳ Loading dashboard...
+                </div>
+            </div>
+        );
+    }
+
+    const statCards = [
+        { label: "Total Orders", value: stats.totalOrders, icon: "🛒", color: "linear-gradient(135deg, #1E90FF, #4B368B)" },
+        { label: "Pending Orders", value: stats.pendingOrders, icon: "⏳", color: "linear-gradient(135deg, #FFA500, #FF8C00)" },
+        { label: "Completed Orders", value: stats.completedOrders, icon: "✅", color: "linear-gradient(135deg, #4CAF50, #45a049)" },
+        { label: "Total Spent", value: `$${stats.totalSpent.toFixed(2)}`, icon: "💰", color: "linear-gradient(135deg, #9C27B0, #7B1FA2)" },
+        { label: "Cart Items", value: stats.cartItems, icon: "🛍️", color: "linear-gradient(135deg, #1E90FF, #4B368B)" },
+        { label: "Pending Payments", value: stats.pendingPayments, icon: "💳", color: "linear-gradient(135deg, #dc3545, #c82333)" }
+    ];
+
+    const quickActions = [
+        { label: "Browse Products", icon: "🛍️", link: "/products", color: "#1E90FF" },
+        { label: "My Cart", icon: "🛒", link: "/cart", color: "#4CAF50" },
+        { label: "My Orders", icon: "📦", link: "/orders", color: "#9C27B0" },
+        { label: "My Payments", icon: "💳", link: "/payments", color: "#FFA500" }
+    ];
 
     return (
-        <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-            <h2>My Dashboard</h2>
-            <p style={{ color: "#666", marginBottom: "30px" }}>Welcome back! Here's your shopping overview.</p>
+        <div style={{
+            minHeight: "100vh",
+            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
+            padding: "60px 20px"
+        }}>
+            <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+                {/* Header */}
+                <div style={{ marginBottom: "40px", textAlign: "center" }}>
+                    <h1 style={{
+                        fontSize: "48px",
+                        fontWeight: "800",
+                        background: "linear-gradient(135deg, #1E90FF, #4B368B)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        marginBottom: "8px"
+                    }}>
+                        👤 Customer Dashboard
+                    </h1>
+                    <p style={{ color: "#666", fontSize: "18px", fontWeight: "600" }}>
+                        Track your orders and shopping activity
+                    </p>
+                </div>
 
-            {/* Stats Grid */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "20px",
-                marginBottom: "30px"
-            }}>
-                <StatCard
-                    title="Total Orders"
-                    value={stats.totalOrders}
-                    color="#007bff"
-                    icon="📦"
-                    link="/orders"
-                />
-                <StatCard
-                    title="Pending Orders"
-                    value={stats.pendingOrders}
-                    color="#ffc107"
-                    icon="⏳"
-                    link="/orders"
-                />
-                <StatCard
-                    title="Completed Orders"
-                    value={stats.completedOrders}
-                    color="#28a745"
-                    icon="✅"
-                    link="/orders"
-                />
-                <StatCard
-                    title="Total Spent"
-                    value={`$${stats.totalSpent.toFixed(2)}`}
-                    color="#6c757d"
-                    icon="💰"
-                />
-                <StatCard
-                    title="Cart Items"
-                    value={stats.cartItems}
-                    color="#17a2b8"
-                    icon="🛒"
-                    link="/cart"
-                />
-                <StatCard
-                    title="Pending Payments"
-                    value={stats.pendingPayments}
-                    color="#dc3545"
-                    icon="💳"
-                    link="/payments"
-                />
-            </div>
+                {/* Stats Grid */}
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                    gap: "24px",
+                    marginBottom: "40px"
+                }}>
+                    {statCards.map((stat, index) => (
+                        <div
+                            key={index}
+                            style={{
+                                background: "rgba(255, 255, 255, 0.8)",
+                                backdropFilter: "blur(20px)",
+                                WebkitBackdropFilter: "blur(20px)",
+                                border: "1px solid rgba(255,255,255,0.3)",
+                                borderRadius: "20px",
+                                padding: "28px",
+                                boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+                                transition: "all 0.3s"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "translateY(-8px)";
+                                e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.15)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.1)";
+                            }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div>
+                                    <p style={{
+                                        fontSize: "14px",
+                                        color: "#666",
+                                        fontWeight: "600",
+                                        marginBottom: "8px",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "1px"
+                                    }}>
+                                        {stat.label}
+                                    </p>
+                                    <h3 style={{
+                                        fontSize: "32px",
+                                        fontWeight: "800",
+                                        color: "#1A1A2E",
+                                        margin: 0
+                                    }}>
+                                        {stat.value}
+                                    </h3>
+                                </div>
+                                <div style={{
+                                    width: "60px",
+                                    height: "60px",
+                                    borderRadius: "16px",
+                                    background: stat.color,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "28px",
+                                    boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
+                                }}>
+                                    {stat.icon}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
 
-            {/* Recent Orders */}
-            <div style={{
-                backgroundColor: "#fff",
-                border: "1px solid #e0e0e0",
-                borderRadius: "8px",
-                padding: "20px"
-            }}>
-                <h3>Recent Orders</h3>
-                {recentOrders.length === 0 ? (
-                    <p>No orders yet. <Link to="/products">Start shopping!</Link></p>
-                ) : (
-                    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "15px" }}>
-                        <thead>
-                        <tr style={{ backgroundColor: "#f5f5f5" }}>
-                            <th style={{ padding: "10px", textAlign: "left" }}>Order ID</th>
-                            <th style={{ padding: "10px", textAlign: "left" }}>Status</th>
-                            <th style={{ padding: "10px", textAlign: "right" }}>Total</th>
-                            <th style={{ padding: "10px", textAlign: "center" }}>Action</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {recentOrders.map(order => (
-                            <tr key={order.id} style={{ borderBottom: "1px solid #e0e0e0" }}>
-                                <td style={{ padding: "10px" }}>#{order.id}</td>
-                                <td style={{ padding: "10px" }}>
+                {/* Recent Orders */}
+                {recentOrders.length > 0 && (
+                    <div style={{
+                        background: "rgba(255, 255, 255, 0.8)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        borderRadius: "24px",
+                        padding: "30px",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+                        marginBottom: "30px"
+                    }}>
+                        <h2 style={{
+                            fontSize: "24px",
+                            fontWeight: "800",
+                            color: "#1A1A2E",
+                            marginBottom: "20px"
+                        }}>
+                            📦 Recent Orders
+                        </h2>
+                        <div style={{ display: "grid", gap: "12px" }}>
+                            {recentOrders.map((order, index) => (
+                                <div
+                                    key={index}
+                                    style={{
+                                        padding: "20px",
+                                        background: "linear-gradient(135deg, rgba(30,144,255,0.05), rgba(75,54,139,0.05))",
+                                        borderRadius: "12px",
+                                        border: "1px solid rgba(30,144,255,0.1)",
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        flexWrap: "wrap",
+                                        gap: "12px"
+                                    }}
+                                >
+                                    <div>
+                                        <p style={{ fontWeight: "700", color: "#1A1A2E", marginBottom: "4px" }}>
+                                            Order #{order.id}
+                                        </p>
+                                        <p style={{ fontSize: "14px", color: "#666" }}>
+                                            {order.items?.length || 0} items
+                                        </p>
+                                    </div>
+                                    <div style={{ textAlign: "right" }}>
+                                        <p style={{ fontWeight: "800", color: "#1A1A2E", fontSize: "18px" }}>
+                                            ${order.total.toFixed(2)}
+                                        </p>
                                         <span style={{
-                                            padding: "4px 8px",
-                                            borderRadius: "12px",
+                                            padding: "4px 12px",
+                                            background: order.status === "DELIVERED" ? "#4CAF50" : "#FFA500",
+                                            color: "white",
+                                            borderRadius: "8px",
                                             fontSize: "12px",
-                                            fontWeight: "bold",
-                                            backgroundColor: getStatusColor(order.status),
-                                            color: "#fff"
+                                            fontWeight: "700"
                                         }}>
                                             {order.status}
                                         </span>
-                                </td>
-                                <td style={{ padding: "10px", textAlign: "right" }}>${order.total}</td>
-                                <td style={{ padding: "10px", textAlign: "center" }}>
-                                    <Link to={`/orders/${order.id}`}>
-                                        <button style={{
-                                            padding: "6px 12px",
-                                            backgroundColor: "#007bff",
-                                            color: "white",
-                                            border: "none",
-                                            borderRadius: "4px",
-                                            cursor: "pointer"
-                                        }}>
-                                            View
-                                        </button>
-                                    </Link>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 )}
-            </div>
 
-            {/* Quick Actions */}
-            <div style={{ marginTop: "30px", display: "flex", gap: "15px", flexWrap: "wrap" }}>
-                <Link to="/products">
-                    <button style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#28a745",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer",
-                        fontWeight: "bold"
+                {/* Quick Actions */}
+                <div style={{
+                    background: "rgba(255, 255, 255, 0.8)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: "24px",
+                    padding: "40px",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
+                }}>
+                    <h2 style={{
+                        fontSize: "24px",
+                        fontWeight: "800",
+                        color: "#1A1A2E",
+                        marginBottom: "24px"
                     }}>
-                        Browse Products
-                    </button>
-                </Link>
-                <Link to="/cart">
-                    <button style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#007bff",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer",
-                        fontWeight: "bold"
+                        ⚡ Quick Actions
+                    </h2>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "16px"
                     }}>
-                        View Cart
-                    </button>
-                </Link>
-                <Link to="/orders">
-                    <button style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#6c757d",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer",
-                        fontWeight: "bold"
-                    }}>
-                        My Orders
-                    </button>
-                </Link>
+                        {quickActions.map((action, index) => (
+                            <Link
+                                key={index}
+                                to={action.link}
+                                style={{
+                                    textDecoration: "none",
+                                    padding: "20px",
+                                    background: `linear-gradient(135deg, ${action.color}15, ${action.color}25)`,
+                                    borderRadius: "16px",
+                                    border: `2px solid ${action.color}40`,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: "12px",
+                                    transition: "all 0.3s"
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = "translateY(-4px)";
+                                    e.currentTarget.style.borderColor = action.color;
+                                    e.currentTarget.style.boxShadow = `0 8px 24px ${action.color}40`;
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.borderColor = `${action.color}40`;
+                                    e.currentTarget.style.boxShadow = "none";
+                                }}
+                            >
+                                <span style={{ fontSize: "36px" }}>{action.icon}</span>
+                                <span style={{
+                                    fontSize: "16px",
+                                    fontWeight: "700",
+                                    color: "#1A1A2E",
+                                    textAlign: "center"
+                                }}>
+                                    {action.label}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
             </div>
         </div>
     );
-}
-
-function StatCard({ title, value, color, icon, link }) {
-    const card = (
-        <div style={{
-            backgroundColor: "#fff",
-            border: `2px solid ${color}`,
-            borderRadius: "8px",
-            padding: "20px",
-            textAlign: "center",
-            cursor: link ? "pointer" : "default",
-            transition: "transform 0.2s"
-        }}
-             onMouseEnter={(e) => link && (e.currentTarget.style.transform = "scale(1.05)")}
-             onMouseLeave={(e) => link && (e.currentTarget.style.transform = "scale(1)")}
-        >
-            <div style={{ fontSize: "40px", marginBottom: "10px" }}>{icon}</div>
-            <div style={{ fontSize: "24px", fontWeight: "bold", color }}>{value}</div>
-            <div style={{ fontSize: "14px", color: "#666", marginTop: "5px" }}>{title}</div>
-        </div>
-    );
-
-    return link ? <Link to={link} style={{ textDecoration: "none" }}>{card}</Link> : card;
-}
-
-function getStatusColor(status) {
-    const colors = {
-        PENDING: "#ffc107",
-        CONFIRMED: "#17a2b8",
-        PROCESSING: "#007bff",
-        SHIPPED: "#6c757d",
-        DELIVERED: "#28a745",
-        CANCELLED: "#dc3545"
-    };
-    return colors[status] || "#6c757d";
 }
