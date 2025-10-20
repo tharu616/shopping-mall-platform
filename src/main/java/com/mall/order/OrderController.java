@@ -4,6 +4,7 @@ import com.mall.order.dto.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,7 +13,10 @@ import java.util.List;
 @RequestMapping("/orders")
 public class OrderController {
     private final OrderService service;
-    public OrderController(OrderService s) { this.service = s; }
+
+    public OrderController(OrderService s) {
+        this.service = s;
+    }
 
     // Customer endpoints
     @PostMapping
@@ -30,12 +34,36 @@ public class OrderController {
     @GetMapping("/{id}")
     public OrderDto getMine(@AuthenticationPrincipal UserDetails principal, @PathVariable Long id) {
         var email = principal.getUsername();
-        return service.getOne(id, email);
+
+        // Check if user is admin/vendor
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN") || auth.getAuthority().equals("ROLE_VENDOR"));
+
+        if (isAdmin) {
+            // Admin can view any order
+            return service.listByStatus(null).stream()
+                    .filter(o -> o.id().equals(id))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        } else {
+            // Customer can only view their own order
+            return service.getOne(id, email);
+        }
     }
 
-    // Admin endpoints
+    // Admin/Vendor endpoints
     @GetMapping
-    public List<OrderDto> listByStatus(@RequestParam(required = false) OrderStatus status) {
+    public List<OrderDto> listByStatus(@AuthenticationPrincipal UserDetails principal, @RequestParam(required = false) OrderStatus status) {
+        // Check if user is admin or vendor
+        boolean isAdminOrVendor = principal.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN") || auth.getAuthority().equals("ROLE_VENDOR"));
+
+        if (!isAdminOrVendor) {
+            // If customer, return only their orders
+            return service.listMy(principal.getUsername());
+        }
+
+        // Admin/Vendor can see all orders
         return service.listByStatus(status);
     }
 
@@ -44,7 +72,7 @@ public class OrderController {
         return service.updateStatus(id, req);
     }
 
-    @ExceptionHandler({IllegalArgumentException.class})
+    @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> badRequest(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(java.util.Map.of("message", ex.getMessage()));
     }
