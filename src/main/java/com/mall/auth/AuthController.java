@@ -11,6 +11,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 record LoginRequest(@Email String email, @NotBlank String password) {}
 record RegisterRequest(@Email String email, @NotBlank String password, @NotBlank String fullName, Role role) {}
 record AuthResponse(String token) {}
@@ -46,4 +48,25 @@ public class AuthController {
     public ResponseEntity<?> badRequest(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(java.util.Map.of("message", ex.getMessage()));
     }
+
+    // Add these to your existing AuthController.java
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        authService.sendPasswordResetToken(request.email());
+        return ResponseEntity.ok(Map.of("message", "Password reset link sent to your email"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+    }
+
+    @GetMapping("/verify-reset-token/{token}")
+    public ResponseEntity<?> verifyResetToken(@PathVariable String token) {
+        boolean isValid = authService.isResetTokenValid(token);
+        return ResponseEntity.ok(Map.of("valid", isValid));
+    }
+
 }
