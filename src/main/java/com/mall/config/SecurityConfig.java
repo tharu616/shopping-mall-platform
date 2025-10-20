@@ -34,6 +34,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
                         .requestMatchers("/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                        // NEW: Allow public access to uploaded files
+                        .requestMatchers("/profile-pictures/**", "/receipts/**", "/uploads/**").permitAll()
                         .anyRequest().authenticated()
                 );
 
@@ -42,7 +44,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     AuthenticationManager authenticationManager() {
