@@ -15,18 +15,17 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5174")
+@CrossOrigin(origins = "http://localhost:5173")
 public class ReviewController {
-
     private final ReviewService reviewService;
 
     // Create review (authenticated users)
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReviewDto> createReview(
-            @RequestBody CreateReviewRequest request,
+    public ResponseEntity<ReviewDto> createReview(@RequestBody CreateReviewRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
+        System.out.println("createReview user=" + (userDetails!=null ? userDetails.getUsername() : "null"));
         ReviewDto review = reviewService.createReview(request, userDetails.getUsername());
         return ResponseEntity.ok(review);
     }
@@ -52,6 +51,7 @@ public class ReviewController {
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ReviewDto>> getAllReviews() {
+        System.out.println("Review Should work");
         List<ReviewDto> reviews = reviewService.getAllReviews();
         return ResponseEntity.ok(reviews);
     }

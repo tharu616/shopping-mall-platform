@@ -4,6 +4,8 @@ import com.mall.order.Order;
 import com.mall.order.OrderRepository;
 import com.mall.order.OrderStatus;
 import com.mall.payment.dto.*;
+import com.mall.payment.validation.PaymentValidatorFactory;
+import com.mall.payment.state.PaymentStateFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,27 +38,40 @@ public class PaymentService {
 
     @Transactional
     public PaymentDto upload(String userEmail, UploadPaymentRequest req) {
-        // Basic validation
-        if (req.orderId() == null || req.amount() == null || req.amount() <= 0
-                || req.paymentMethod() == null || req.paymentMethod().isBlank())
-            throw new IllegalArgumentException("Invalid payment data");
+        // 1. Validate basic fields
+        validateBasicFields(req);
 
+        // 2. Validate payment method specific fields using Strategy pattern
+        var validator = PaymentValidatorFactory.getValidator(req.paymentMethod());
+        var errors = validator.validate(req);
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException("Validation failed: " + String.join(", ", errors));
+        }
+
+        // 3. Check reference uniqueness
         if (req.reference() != null && !req.reference().isBlank()
-                && payments.existsByReference(req.reference().trim().toUpperCase()))
+                && payments.existsByReference(req.reference().trim().toUpperCase())) {
             throw new IllegalArgumentException("Reference already used");
+        }
 
-        // Validate payment method specific fields
-        validatePaymentMethod(req);
-
+        // 4. Validate order
         Order order = orders.findById(req.orderId())
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
 
-        if (!order.getUserEmail().equals(userEmail))
+        if (!order.getUserEmail().equals(userEmail)) {
             throw new IllegalArgumentException("Cannot upload payment for another user");
+        }
 
-        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.DELIVERED)
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.DELIVERED) {
             throw new IllegalArgumentException("Order cannot accept payments in this status");
+        }
 
+        // 5. Validate amount matches order total
+        if (Math.abs(req.amount() - order.getTotal()) > 0.01) {
+            throw new IllegalArgumentException("Payment amount must match order total");
+        }
+
+        // 6. Build payment using Builder pattern
         var p = Payment.builder()
                 .orderId(order.getId())
                 .userEmail(userEmail)
@@ -67,7 +82,29 @@ public class PaymentService {
                 .receiptUrl(req.receiptUrl())
                 .build();
 
-        // Set payment method specific fields
+        // 7. Set payment method specific fields using Template Method pattern
+        setPaymentMethodFields(p, req);
+
+        payments.save(p);
+        return toDto(p);
+    }
+
+    private void validateBasicFields(UploadPaymentRequest req) {
+        if (req.orderId() == null) {
+            throw new IllegalArgumentException("Order ID is required");
+        }
+        if (req.amount() == null || req.amount() <= 0) {
+            throw new IllegalArgumentException("Amount must be greater than zero");
+        }
+        if (req.amount() > 1000000) {
+            throw new IllegalArgumentException("Amount exceeds maximum limit");
+        }
+        if (req.paymentMethod() == null || req.paymentMethod().isBlank()) {
+            throw new IllegalArgumentException("Payment method is required");
+        }
+    }
+
+    private void setPaymentMethodFields(Payment p, UploadPaymentRequest req) {
         switch (req.paymentMethod()) {
             case "CARD" -> {
                 p.setCardLast4(maskCard(req.cardNumber()));
@@ -85,56 +122,22 @@ public class PaymentService {
                 p.setPaypalTransactionId(req.paypalTransactionId());
             }
             case "CASH_ON_DELIVERY" -> {
-                // No additional fields needed, auto-approve
+                // Auto-approve COD
                 p.setStatus(PaymentStatus.VERIFIED);
             }
-        }
-
-        payments.save(p);
-        return toDto(p);
-    }
-
-    private void validatePaymentMethod(UploadPaymentRequest req) {
-        switch (req.paymentMethod()) {
-            case "CARD" -> {
-                if (req.cardNumber() == null || req.cardNumber().length() < 13)
-                    throw new IllegalArgumentException("Invalid card number");
-                if (req.cardHolderName() == null || req.cardHolderName().isBlank())
-                    throw new IllegalArgumentException("Card holder name required");
-                if (req.cardExpiryDate() == null || req.cardExpiryDate().isBlank())
-                    throw new IllegalArgumentException("Card expiry date required");
-                if (req.cardCvv() == null || req.cardCvv().length() != 3)
-                    throw new IllegalArgumentException("Invalid CVV");
-            }
-            case "BANK_TRANSFER" -> {
-                if (req.bankName() == null || req.bankName().isBlank())
-                    throw new IllegalArgumentException("Bank name required");
-                if (req.accountNumber() == null || req.accountNumber().isBlank())
-                    throw new IllegalArgumentException("Account number required");
-                if (req.accountHolderName() == null || req.accountHolderName().isBlank())
-                    throw new IllegalArgumentException("Account holder name required");
-            }
-            case "PAYPAL" -> {
-                if (req.paypalEmail() == null || req.paypalEmail().isBlank())
-                    throw new IllegalArgumentException("PayPal email required");
-                if (req.paypalTransactionId() == null || req.paypalTransactionId().isBlank())
-                    throw new IllegalArgumentException("PayPal transaction ID required");
-            }
-            case "CASH_ON_DELIVERY" -> {
-                // No validation needed
-            }
-            default -> throw new IllegalArgumentException("Invalid payment method");
         }
     }
 
     private String maskCard(String cardNumber) {
         if (cardNumber == null || cardNumber.length() < 4) return "****";
-        return cardNumber.substring(cardNumber.length() - 4);
+        String cleaned = cardNumber.replaceAll("\\s", "");
+        return cleaned.substring(cleaned.length() - 4);
     }
 
     private String maskAccount(String accountNumber) {
         if (accountNumber == null || accountNumber.length() < 4) return "****";
-        return accountNumber.substring(accountNumber.length() - 4);
+        String cleaned = accountNumber.replaceAll("\\s", "");
+        return cleaned.substring(cleaned.length() - 4);
     }
 
     private String generateReference() {
@@ -146,13 +149,17 @@ public class PaymentService {
         var p = payments.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
 
-        if (p.getStatus() != PaymentStatus.PENDING)
-            throw new IllegalArgumentException("Payment already reviewed");
+        // Use State pattern to validate transition
+        var state = PaymentStateFactory.getState(p.getStatus());
+        if (!state.canTransitionTo(PaymentStatus.VERIFIED)) {
+            throw new IllegalArgumentException("Cannot approve payment in " + p.getStatus() + " status");
+        }
 
         p.setStatus(PaymentStatus.VERIFIED);
         p.setAdminNote(review == null ? null : review.adminNote());
         payments.save(p);
 
+        // Update order status
         var order = orders.findById(p.getOrderId()).orElse(null);
         if (order != null && order.getStatus() == OrderStatus.PENDING) {
             order.setStatus(OrderStatus.CONFIRMED);
@@ -167,12 +174,20 @@ public class PaymentService {
         var p = payments.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
 
-        if (p.getStatus() != PaymentStatus.PENDING)
-            throw new IllegalArgumentException("Payment already reviewed");
+        // Use State pattern to validate transition
+        var state = PaymentStateFactory.getState(p.getStatus());
+        if (!state.canTransitionTo(PaymentStatus.REJECTED)) {
+            throw new IllegalArgumentException("Cannot reject payment in " + p.getStatus() + " status");
+        }
+
+        if (review == null || review.adminNote() == null || review.adminNote().trim().isEmpty()) {
+            throw new IllegalArgumentException("Admin note is required for rejection");
+        }
 
         p.setStatus(PaymentStatus.REJECTED);
-        p.setAdminNote(review == null ? null : review.adminNote());
+        p.setAdminNote(review.adminNote());
         payments.save(p);
+
         return toDto(p);
     }
 

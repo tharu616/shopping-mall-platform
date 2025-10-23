@@ -7,6 +7,7 @@ export default function Checkout() {
     const [shippingAddress, setShippingAddress] = useState("");
     const [msg, setMsg] = useState("");
     const [loading, setLoading] = useState(false);
+    const [checkoutErrors, setCheckoutErrors] = useState({});
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -15,9 +16,60 @@ export default function Checkout() {
             .catch(() => setMsg("Could not load cart."));
     }, []);
 
+    // Validation helpers
+    function validateAddress(addr) {
+        const trimmed = (addr || "").trim();
+        if (!trimmed) return "Shipping address is required.";
+        if (trimmed.length < 10) return "Please enter a complete address (min. 10 characters).";
+        if (trimmed.length > 500) return "Address is too long (max. 500 characters).";
+        return "";
+    }
+
+    function validateCart(items) {
+        if (!items || items.length === 0) return "Your cart is empty. Add items before checkout.";
+        for (const it of items) {
+            if (!it.quantity || it.quantity < 1) {
+                return `Invalid quantity for ${it.productName || it.name}.`;
+            }
+            if (it.price == null || it.price < 0) {
+                return `Invalid price for ${it.productName || it.name}.`;
+            }
+        }
+        return "";
+    }
+
+    function validateTotal(items) {
+        if (!items || items.length === 0) return "";
+        const sum = items.reduce((s, it) => s + (it.price * it.quantity), 0);
+        if (sum <= 0) return "Order total must be greater than zero.";
+        if (sum > 1000000) return "Order total exceeds maximum allowed amount.";
+        return "";
+    }
+
+    function validateCheckout() {
+        const errors = {};
+        const addrErr = validateAddress(shippingAddress);
+        const cartErr = validateCart(cart);
+        const totalErr = validateTotal(cart);
+
+        if (addrErr) errors.address = addrErr;
+        if (cartErr) errors.cart = cartErr;
+        if (totalErr) errors.total = totalErr;
+
+        return errors;
+    }
+
+    // Revalidate on address or cart change
+    useEffect(() => {
+        const errs = validateCheckout();
+        setCheckoutErrors(errs);
+    }, [shippingAddress, cart]);
+
     async function handleCheckout() {
-        if (!shippingAddress.trim()) {
-            setMsg("Please enter a shipping address.");
+        const errs = validateCheckout();
+        if (Object.keys(errs).length > 0) {
+            setCheckoutErrors(errs);
+            setMsg("Please fix the errors below before placing your order.");
             return;
         }
 
@@ -53,8 +105,9 @@ export default function Checkout() {
     }
 
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const hasErrors = Object.keys(checkoutErrors).length > 0;
 
-    if (cart.length === 0) {
+    if (cart.length === 0 && !checkoutErrors.cart) {
         return (
             <div style={{
                 minHeight: "100vh",
@@ -201,6 +254,13 @@ export default function Checkout() {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Inline cart error */}
+                            {checkoutErrors.cart && (
+                                <p style={{ color: "#dc3545", fontSize: 14, marginTop: 16 }}>
+                                    {checkoutErrors.cart}
+                                </p>
+                            )}
                         </div>
 
                         {/* Shipping Address - Glassmorphism */}
@@ -237,7 +297,7 @@ export default function Checkout() {
                                     width: "100%",
                                     padding: "16px",
                                     borderRadius: "12px",
-                                    border: "2px solid rgba(255,255,255,0.3)",
+                                    border: `2px solid ${checkoutErrors.address ? "#dc3545" : "rgba(255,255,255,0.3)"}`,
                                     background: "rgba(255,255,255,0.7)",
                                     fontSize: "15px",
                                     fontFamily: "inherit",
@@ -246,14 +306,24 @@ export default function Checkout() {
                                     transition: "all 0.3s"
                                 }}
                                 onFocus={(e) => {
-                                    e.target.style.borderColor = "#1E90FF";
-                                    e.target.style.background = "rgba(255,255,255,0.9)";
+                                    if (!checkoutErrors.address) {
+                                        e.target.style.borderColor = "#1E90FF";
+                                        e.target.style.background = "rgba(255,255,255,0.9)";
+                                    }
                                 }}
                                 onBlur={(e) => {
-                                    e.target.style.borderColor = "rgba(255,255,255,0.3)";
-                                    e.target.style.background = "rgba(255,255,255,0.7)";
+                                    if (!checkoutErrors.address) {
+                                        e.target.style.borderColor = "rgba(255,255,255,0.3)";
+                                        e.target.style.background = "rgba(255,255,255,0.7)";
+                                    }
                                 }}
                             />
+                            {/* Inline address error */}
+                            {checkoutErrors.address && (
+                                <p style={{ color: "#dc3545", fontSize: 14, marginTop: 12 }}>
+                                    {checkoutErrors.address}
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -327,16 +397,23 @@ export default function Checkout() {
                                         ${total.toFixed(2)}
                                     </span>
                                 </div>
+
+                                {/* Inline total error */}
+                                {checkoutErrors.total && (
+                                    <p style={{ color: "#dc3545", fontSize: 14, marginTop: 8 }}>
+                                        {checkoutErrors.total}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Place Order Button */}
                             <button
                                 onClick={handleCheckout}
-                                disabled={loading}
+                                disabled={loading || hasErrors}
                                 style={{
                                     width: "100%",
                                     padding: "18px",
-                                    background: loading
+                                    background: (loading || hasErrors)
                                         ? "#ccc"
                                         : "linear-gradient(135deg, #4CAF50, #45a049)",
                                     color: "white",
@@ -344,13 +421,20 @@ export default function Checkout() {
                                     borderRadius: "14px",
                                     fontSize: "18px",
                                     fontWeight: "700",
-                                    cursor: loading ? "not-allowed" : "pointer",
-                                    boxShadow: loading
+                                    cursor: (loading || hasErrors) ? "not-allowed" : "pointer",
+                                    boxShadow: (loading || hasErrors)
                                         ? "none"
                                         : "0 8px 24px rgba(76,175,80,0.4)",
                                     transition: "all 0.3s",
                                     marginBottom: "12px"
                                 }}
+                                title={
+                                    hasErrors
+                                        ? "Please fix all errors before placing order"
+                                        : loading
+                                            ? "Processing..."
+                                            : "Place your order"
+                                }
                             >
                                 {loading ? (
                                     <span>⏳ Processing...</span>

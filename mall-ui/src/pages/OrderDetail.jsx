@@ -12,6 +12,7 @@ export default function OrderDetail() {
     const [error, setError] = useState("");
     const [newStatus, setNewStatus] = useState("");
     const [updateMsg, setUpdateMsg] = useState("");
+    const [statusError, setStatusError] = useState("");
 
     const getValidNextStatuses = (currentStatus) => {
         const transitions = {
@@ -55,11 +56,40 @@ export default function OrderDetail() {
             .finally(() => setLoading(false));
     }
 
+    // Validation helpers
+    function validateStatusTransition(currentStatus, nextStatus) {
+        if (!currentStatus || !nextStatus) return "Invalid status.";
+        if (currentStatus === nextStatus) return "Please select a different status.";
+
+        const validNext = getValidNextStatuses(currentStatus);
+        if (!validNext.includes(nextStatus)) {
+            return `Cannot change from ${currentStatus} to ${nextStatus}.`;
+        }
+        return "";
+    }
+
+    function validateOrderData(ord) {
+        if (!ord || !ord.id) return "Invalid order data.";
+        if (!ord.status) return "Order status is missing.";
+        if (ord.total == null || ord.total < 0) return "Invalid order total.";
+        if (!ord.items || ord.items.length === 0) return "Order has no items.";
+        return "";
+    }
+
+    // Revalidate status when newStatus changes
+    useEffect(() => {
+        if (order && newStatus) {
+            const err = validateStatusTransition(order.status, newStatus);
+            setStatusError(err);
+        }
+    }, [newStatus, order]);
+
     async function handleStatusUpdate() {
         setUpdateMsg("");
 
-        if (!newStatus || newStatus === order.status) {
-            setUpdateMsg("Please select a different status.");
+        const transErr = validateStatusTransition(order.status, newStatus);
+        if (transErr) {
+            setUpdateMsg(transErr);
             return;
         }
 
@@ -132,6 +162,7 @@ export default function OrderDetail() {
 
     const validStatuses = getValidNextStatuses(order.status);
     const statusStyle = getStatusStyle(order.status);
+    const orderDataErr = validateOrderData(order);
 
     return (
         <div style={{
@@ -189,6 +220,21 @@ export default function OrderDetail() {
                         </span>
                     </div>
                 </div>
+
+                {/* Global order data validation error */}
+                {orderDataErr && (
+                    <div style={{
+                        marginBottom: "24px",
+                        padding: "16px",
+                        background: "rgba(220,53,69,0.1)",
+                        border: "2px solid #dc3545",
+                        borderRadius: "12px",
+                        color: "#dc3545",
+                        fontWeight: "600"
+                    }}>
+                        ⚠️ {orderDataErr}
+                    </div>
+                )}
 
                 {/* Order Info Card - Glassmorphism */}
                 <div style={{
@@ -323,7 +369,7 @@ export default function OrderDetail() {
                         background: "linear-gradient(135deg, rgba(76,175,80,0.1), rgba(30,144,255,0.1))",
                         backdropFilter: "blur(20px)",
                         WebkitBackdropFilter: "blur(20px)",
-                        border: "2px solid #4CAF50",
+                        border: statusError ? "2px solid #dc3545" : "2px solid #4CAF50",
                         borderRadius: "20px",
                         padding: "30px",
                         boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
@@ -348,7 +394,7 @@ export default function OrderDetail() {
                                     padding: "14px 18px",
                                     fontSize: "15px",
                                     borderRadius: "12px",
-                                    border: "2px solid rgba(255,255,255,0.3)",
+                                    border: statusError ? "2px solid #dc3545" : "2px solid rgba(255,255,255,0.3)",
                                     background: "rgba(255,255,255,0.7)",
                                     fontWeight: "600",
                                     flex: "1",
@@ -365,27 +411,35 @@ export default function OrderDetail() {
 
                             <button
                                 onClick={handleStatusUpdate}
-                                disabled={newStatus === order.status}
+                                disabled={newStatus === order.status || !!statusError}
                                 style={{
                                     padding: "14px 32px",
                                     fontSize: "16px",
-                                    background: newStatus === order.status
+                                    background: (newStatus === order.status || statusError)
                                         ? "#ccc"
                                         : "linear-gradient(135deg, #4CAF50, #45a049)",
                                     color: "white",
                                     border: "none",
                                     borderRadius: "12px",
-                                    cursor: newStatus === order.status ? "not-allowed" : "pointer",
+                                    cursor: (newStatus === order.status || statusError) ? "not-allowed" : "pointer",
                                     fontWeight: "700",
-                                    boxShadow: newStatus === order.status
+                                    boxShadow: (newStatus === order.status || statusError)
                                         ? "none"
                                         : "0 4px 15px rgba(76,175,80,0.3)",
                                     transition: "all 0.3s"
                                 }}
+                                title={statusError || "Update order status"}
                             >
                                 Update Status
                             </button>
                         </div>
+
+                        {/* Inline status validation error */}
+                        {statusError && (
+                            <p style={{ color: "#dc3545", fontSize: 14, marginTop: 12 }}>
+                                {statusError}
+                            </p>
+                        )}
 
                         {updateMsg && (
                             <div style={{
