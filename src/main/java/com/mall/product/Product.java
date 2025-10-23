@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -49,7 +50,8 @@ public class Product extends BaseEntity {
     @Column(length=500)
     private String imageUrl;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<Review> reviews;
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews = new ArrayList<>();
+
 
 }

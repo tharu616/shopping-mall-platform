@@ -25,7 +25,7 @@ export default function AdminDashboard() {
                 API.get("/products"),
                 API.get("/orders/all"),
                 API.get("/payments/pending"),
-                API.get("/reviews/pending"),
+                API.get("/api/reviews/pending"),
                 API.get("/discounts").catch(() => ({ data: [] }))
             ]);
 

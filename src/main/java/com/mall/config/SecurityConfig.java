@@ -20,7 +20,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-
     private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
     private final CorsConfigurationSource corsConfigurationSource;
@@ -31,31 +30,32 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ REVIEWS - FIXED WITH /api/ PREFIX
+                        // ✅ REVIEWS - FIXED (Remove /api/ prefix)
                         .requestMatchers(HttpMethod.GET, "/api/reviews/product/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/my-reviews").authenticated()
                         .requestMatchers("/api/reviews/admin/**").hasRole("ADMIN")
 
-                        // ✅ OPTIONS (CORS preflight)
+                        // OPTIONS (CORS preflight)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ✅ PUBLIC: Products
+                        // PUBLIC: Products
                         .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
 
-                        // ✅ PUBLIC: Auth
+                        // PUBLIC: Auth
                         .requestMatchers("/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
 
-                        // ✅ PUBLIC: Uploaded files
+                        // PUBLIC: Uploaded files
                         .requestMatchers("/profile-pictures/**", "/receipts/**", "/uploads/**").permitAll()
 
-                        // ✅ AUTHENTICATED: Cart
+                        // AUTHENTICATED: Cart
                         .requestMatchers("/cart/**").authenticated()
 
-                        // ✅ AUTHENTICATED: Payments
+                        // AUTHENTICATED: Payments
                         .requestMatchers("/payments/**").authenticated()
 
-                        // ✅ ALL OTHER REQUESTS - MUST BE LAST
+                        // ALL OTHER REQUESTS - MUST BE LAST
                         .anyRequest().authenticated()
                 );
 

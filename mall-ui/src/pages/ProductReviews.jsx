@@ -20,7 +20,7 @@ export default function ProductReviews({ productId, reviews, onReviewAdded }) {
         setMsg("");
 
         try {
-            await API.post("/reviews", {
+            await API.post("/api/reviews", {
                 productId,
                 rating,
                 comment: comment.trim()
@@ -31,7 +31,7 @@ export default function ProductReviews({ productId, reviews, onReviewAdded }) {
             if (onReviewAdded) onReviewAdded();
             setTimeout(() => setMsg(""), 5000);
         } catch (err) {
-            setMsg("❌ Failed to submit review");
+            setMsg("❌ Failed to submit");
         }
         setSubmitting(false);
     }

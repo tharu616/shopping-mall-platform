@@ -11,11 +11,16 @@ export default function Categories() {
     const [editCat, setEditCat] = useState(null);
     const [msg, setMsg] = useState("");
     const [catFields, setCatFields] = useState({ name: "", description: "" });
+    const [categoryErrors, setCategoryErrors] = useState({});
+    const [fieldErrors, setFieldErrors] = useState({ name: "", description: "" });
 
     function fetchCategories() {
         setLoading(true);
         API.get("/categories")
-            .then((res) => setCategories(res.data))
+            .then((res) => {
+                setCategories(res.data);
+                validateCategories(res.data);
+            })
             .catch(() => setMsg("❌ Failed to load categories"))
             .finally(() => setLoading(false));
     }
@@ -24,18 +29,97 @@ export default function Categories() {
         fetchCategories();
     }, []);
 
+    // ===== VALIDATION FUNCTIONS =====
+    function validateCategory(cat) {
+        const errors = [];
+
+        if (!cat.id) errors.push("Invalid category ID");
+        if (!cat.name || cat.name.trim().length === 0) errors.push("Name is required");
+        if (cat.name && cat.name.trim().length < 2) errors.push("Name must be at least 2 characters");
+        if (cat.name && cat.name.trim().length > 100) errors.push("Name must not exceed 100 characters");
+        if (cat.name && !/^[a-zA-Z0-9\s&-]+$/.test(cat.name)) errors.push("Name contains invalid characters");
+        if (cat.description && cat.description.trim().length > 500) errors.push("Description too long (max 500 chars)");
+
+        return errors.length > 0 ? errors.join(", ") : "";
+    }
+
+    function validateCategories(categoriesList) {
+        const errors = {};
+        for (const cat of categoriesList || []) {
+            const err = validateCategory(cat);
+            if (err) errors[cat.id] = err;
+        }
+        setCategoryErrors(errors);
+    }
+
+    function validateField(name, value) {
+        let error = "";
+
+        if (name === "name") {
+            if (!value || value.trim().length === 0) {
+                error = "Category name is required";
+            } else if (value.trim().length < 2) {
+                error = "Name must be at least 2 characters";
+            } else if (value.trim().length > 100) {
+                error = "Name must not exceed 100 characters";
+            } else if (!/^[a-zA-Z0-9\s&-]+$/.test(value)) {
+                error = "Only letters, numbers, spaces, &, and - are allowed";
+            }
+        }
+
+        if (name === "description") {
+            if (value && value.trim().length > 500) {
+                error = "Description must not exceed 500 characters";
+            }
+        }
+
+        setFieldErrors(prev => ({ ...prev, [name]: error }));
+        return error === "";
+    }
+
+    function validateAllFields() {
+        const nameValid = validateField("name", catFields.name);
+        const descValid = validateField("description", catFields.description);
+        return nameValid && descValid;
+    }
+
+    // Revalidate when categories change
+    useEffect(() => {
+        if (categories.length > 0) {
+            validateCategories(categories);
+        }
+    }, [categories]);
+
     function handleFieldChange(e) {
-        setCatFields({ ...catFields, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setCatFields({ ...catFields, [name]: value });
+        validateField(name, value);
     }
 
     function handleEdit(cat) {
+        const catErr = categoryErrors[cat.id];
+        if (catErr) {
+            setMsg(`❌ Cannot edit invalid category: ${catErr}`);
+            setTimeout(() => setMsg(""), 3000);
+            return;
+        }
+
         setEditCat(cat);
-        setCatFields({ name: cat.name, description: cat.description });
+        setCatFields({ name: cat.name, description: cat.description || "" });
+        setFieldErrors({ name: "", description: "" });
         setMsg("");
     }
 
     async function handleSave(e) {
         e.preventDefault();
+
+        // Run full validation
+        if (!validateAllFields()) {
+            setMsg("❌ Please fix validation errors before saving");
+            setTimeout(() => setMsg(""), 3000);
+            return;
+        }
+
         if (!catFields.name.trim()) {
             setMsg("❌ Category name is required");
             return;
@@ -43,23 +127,38 @@ export default function Categories() {
 
         try {
             if (editCat) {
-                await API.put(`/categories/${editCat.id}`, catFields);
+                await API.put(`/categories/${editCat.id}`, {
+                    name: catFields.name.trim(),
+                    description: catFields.description.trim()
+                });
                 setMsg("✓ Category updated successfully!");
             } else {
-                await API.post("/categories", catFields);
+                await API.post("/categories", {
+                    name: catFields.name.trim(),
+                    description: catFields.description.trim()
+                });
                 setMsg("✓ Category created successfully!");
             }
             setEditCat(null);
             setCatFields({ name: "", description: "" });
+            setFieldErrors({ name: "", description: "" });
             fetchCategories();
             setTimeout(() => setMsg(""), 3000);
         } catch (err) {
-            setMsg("❌ Failed to save category");
+            const errorMsg = err.response?.data?.message || "Failed to save category";
+            setMsg(`❌ ${errorMsg}`);
             console.error(err);
         }
     }
 
     async function handleDelete(cat) {
+        const catErr = categoryErrors[cat.id];
+        if (catErr) {
+            setMsg(`❌ Cannot delete invalid category: ${catErr}`);
+            setTimeout(() => setMsg(""), 3000);
+            return;
+        }
+
         // ✅ Simple browser confirmation
         const confirmed = window.confirm(
             `Are you sure you want to delete "${cat.name}"?\n\nThis action is permanent and cannot be undone.`
@@ -78,8 +177,14 @@ export default function Categories() {
         }
     }
 
-    function handleViewProducts(categoryId) {
-        navigate(`/products?category=${categoryId}`);
+    function handleViewProducts(cat) {
+        const catErr = categoryErrors[cat.id];
+        if (catErr) {
+            setMsg(`❌ Cannot view products for invalid category: ${catErr}`);
+            setTimeout(() => setMsg(""), 3000);
+            return;
+        }
+        navigate(`/products?category=${cat.id}`);
     }
 
     if (loading) {
@@ -151,11 +256,17 @@ export default function Categories() {
                                     width: "100%",
                                     padding: "12px",
                                     fontSize: "14px",
-                                    border: "1px solid #ddd",
+                                    border: fieldErrors.name ? "2px solid #dc3545" : "1px solid #ddd",
                                     borderRadius: "6px",
                                     boxSizing: "border-box",
+                                    background: fieldErrors.name ? "rgba(220,53,69,0.05)" : "white"
                                 }}
                             />
+                            {fieldErrors.name && (
+                                <div style={{ color: "#dc3545", fontSize: "12px", marginTop: "4px" }}>
+                                    {fieldErrors.name}
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ marginBottom: "20px" }}>
@@ -172,29 +283,42 @@ export default function Categories() {
                                     width: "100%",
                                     padding: "12px",
                                     fontSize: "14px",
-                                    border: "1px solid #ddd",
+                                    border: fieldErrors.description ? "2px solid #dc3545" : "1px solid #ddd",
                                     borderRadius: "6px",
                                     resize: "vertical",
                                     boxSizing: "border-box",
+                                    background: fieldErrors.description ? "rgba(220,53,69,0.05)" : "white"
                                 }}
                             />
+                            {fieldErrors.description && (
+                                <div style={{ color: "#dc3545", fontSize: "12px", marginTop: "4px" }}>
+                                    {fieldErrors.description}
+                                </div>
+                            )}
                         </div>
 
                         <button
                             type="submit"
+                            disabled={!!fieldErrors.name || !!fieldErrors.description}
                             style={{
-                                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                background: (fieldErrors.name || fieldErrors.description)
+                                    ? "#ccc"
+                                    : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                                 color: "white",
                                 padding: "14px 28px",
                                 fontSize: "16px",
                                 border: "none",
                                 borderRadius: "8px",
-                                cursor: "pointer",
+                                cursor: (fieldErrors.name || fieldErrors.description) ? "not-allowed" : "pointer",
                                 fontWeight: "bold",
                                 width: "100%",
                                 transition: "transform 0.2s",
                             }}
-                            onMouseOver={(e) => (e.target.style.transform = "scale(1.02)")}
+                            onMouseOver={(e) => {
+                                if (!fieldErrors.name && !fieldErrors.description) {
+                                    e.target.style.transform = "scale(1.02)";
+                                }
+                            }}
                             onMouseOut={(e) => (e.target.style.transform = "scale(1)")}
                         >
                             ✨ {editCat ? "Update Category" : "Create Category"}
@@ -206,6 +330,7 @@ export default function Categories() {
                                 onClick={() => {
                                     setEditCat(null);
                                     setCatFields({ name: "", description: "" });
+                                    setFieldErrors({ name: "", description: "" });
                                 }}
                                 style={{
                                     background: "#95a5a6",
@@ -256,67 +381,64 @@ export default function Categories() {
                             gap: "20px",
                         }}
                     >
-                        {categories.map((cat) => (
-                            <div
-                                key={cat.id}
-                                style={{
-                                    background: "#f8f9fa",
-                                    padding: "20px",
-                                    borderRadius: "10px",
-                                    border: "1px solid #e0e0e0",
-                                    transition: "transform 0.2s, box-shadow 0.2s",
-                                }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-5px)";
-                                    e.currentTarget.style.boxShadow = "0 6px 15px rgba(0,0,0,0.15)";
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.boxShadow = "none";
-                                }}
-                            >
-                                <h3 style={{ fontSize: "20px", color: "#2c3e50", marginBottom: "10px" }}>
-                                    {cat.name}
-                                </h3>
-                                <p style={{ fontSize: "14px", color: "#7f8c8d", marginBottom: "20px", lineHeight: "1.6" }}>
-                                    {cat.description || "No description provided"}
-                                </p>
+                        {categories.map((cat) => {
+                            const catErr = categoryErrors[cat.id];
 
-                                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                                    {/* View Products Button */}
-                                    <button
-                                        onClick={() => handleViewProducts(cat.id)}
-                                        style={{
-                                            background: "#17a2b8",
-                                            color: "white",
-                                            padding: "8px 16px",
-                                            fontSize: "14px",
-                                            border: "none",
-                                            borderRadius: "6px",
-                                            cursor: "pointer",
-                                            fontWeight: "bold",
-                                            flex: 1,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "5px",
-                                        }}
-                                    >
-                                        👁️ View
-                                    </button>
+                            return (
+                                <div
+                                    key={cat.id}
+                                    style={{
+                                        background: catErr ? "rgba(220,53,69,0.05)" : "#f8f9fa",
+                                        padding: "20px",
+                                        borderRadius: "10px",
+                                        border: catErr ? "2px solid #dc3545" : "1px solid #e0e0e0",
+                                        transition: "transform 0.2s, box-shadow 0.2s",
+                                    }}
+                                    onMouseOver={(e) => {
+                                        if (!catErr) {
+                                            e.currentTarget.style.transform = "translateY(-5px)";
+                                            e.currentTarget.style.boxShadow = "0 6px 15px rgba(0,0,0,0.15)";
+                                        }
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.transform = "translateY(0)";
+                                        e.currentTarget.style.boxShadow = "none";
+                                    }}
+                                >
+                                    <h3 style={{ fontSize: "20px", color: catErr ? "#dc3545" : "#2c3e50", marginBottom: "10px" }}>
+                                        {cat.name}
+                                    </h3>
 
-                                    {/* Edit Button - Admin Only */}
-                                    {role === "ADMIN" && (
+                                    {catErr && (
+                                        <div style={{
+                                            color: "#dc3545",
+                                            fontSize: "12px",
+                                            marginBottom: "10px",
+                                            padding: "8px",
+                                            background: "rgba(220,53,69,0.1)",
+                                            borderRadius: "4px"
+                                        }}>
+                                            ⚠️ {catErr}
+                                        </div>
+                                    )}
+
+                                    <p style={{ fontSize: "14px", color: "#7f8c8d", marginBottom: "20px", lineHeight: "1.6" }}>
+                                        {cat.description || "No description provided"}
+                                    </p>
+
+                                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                                        {/* View Products Button */}
                                         <button
-                                            onClick={() => handleEdit(cat)}
+                                            onClick={() => handleViewProducts(cat)}
+                                            disabled={!!catErr}
                                             style={{
-                                                background: "#3498db",
+                                                background: catErr ? "#ccc" : "#17a2b8",
                                                 color: "white",
                                                 padding: "8px 16px",
                                                 fontSize: "14px",
                                                 border: "none",
                                                 borderRadius: "6px",
-                                                cursor: "pointer",
+                                                cursor: catErr ? "not-allowed" : "pointer",
                                                 fontWeight: "bold",
                                                 flex: 1,
                                                 display: "flex",
@@ -324,37 +446,66 @@ export default function Categories() {
                                                 justifyContent: "center",
                                                 gap: "5px",
                                             }}
+                                            title={catErr ? "Fix validation errors first" : "View products"}
                                         >
-                                            ✏️ Edit
+                                            👁️ View
                                         </button>
-                                    )}
 
-                                    {/* Delete Button - Admin Only */}
-                                    {role === "ADMIN" && (
-                                        <button
-                                            onClick={() => handleDelete(cat)}
-                                            style={{
-                                                background: "#e74c3c",
-                                                color: "white",
-                                                padding: "8px 16px",
-                                                fontSize: "14px",
-                                                border: "none",
-                                                borderRadius: "6px",
-                                                cursor: "pointer",
-                                                fontWeight: "bold",
-                                                flex: 1,
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                gap: "5px",
-                                            }}
-                                        >
-                                            🗑️ Delete
-                                        </button>
-                                    )}
+                                        {/* Edit Button - Admin Only */}
+                                        {role === "ADMIN" && (
+                                            <button
+                                                onClick={() => handleEdit(cat)}
+                                                disabled={!!catErr}
+                                                style={{
+                                                    background: catErr ? "#ccc" : "#3498db",
+                                                    color: "white",
+                                                    padding: "8px 16px",
+                                                    fontSize: "14px",
+                                                    border: "none",
+                                                    borderRadius: "6px",
+                                                    cursor: catErr ? "not-allowed" : "pointer",
+                                                    fontWeight: "bold",
+                                                    flex: 1,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    gap: "5px",
+                                                }}
+                                                title={catErr ? "Fix validation errors first" : "Edit category"}
+                                            >
+                                                ✏️ Edit
+                                            </button>
+                                        )}
+
+                                        {/* Delete Button - Admin Only */}
+                                        {role === "ADMIN" && (
+                                            <button
+                                                onClick={() => handleDelete(cat)}
+                                                disabled={!!catErr}
+                                                style={{
+                                                    background: catErr ? "#ccc" : "#e74c3c",
+                                                    color: "white",
+                                                    padding: "8px 16px",
+                                                    fontSize: "14px",
+                                                    border: "none",
+                                                    borderRadius: "6px",
+                                                    cursor: catErr ? "not-allowed" : "pointer",
+                                                    fontWeight: "bold",
+                                                    flex: 1,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    gap: "5px",
+                                                }}
+                                                title={catErr ? "Fix validation errors first" : "Delete category"}
+                                            >
+                                                🗑️ Delete
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

@@ -10,7 +10,7 @@ export default function ReviewList({ productId }) {
     const [rating, setRating] = useState(5);
 
     function fetchReviews() {
-        API.get(`/products/${productId}/reviews`)
+        API.get(`/api/products/${productId}/reviews`)
             .then(res => setReviews(res.data));
     }
 
@@ -22,7 +22,7 @@ export default function ReviewList({ productId }) {
     async function handleAdd(e) {
         e.preventDefault();
         try {
-            await API.post(`/products/${productId}/reviews`, {
+            await API.post(`/api/products/${productId}/reviews`, {
                 productId: productId,
                 rating: rating,
                 comment: text
@@ -37,7 +37,7 @@ export default function ReviewList({ productId }) {
     }
 
     async function handleDelete(id) {
-        await API.delete(`/reviews/${id}`);
+        await API.delete(`/api/reviews/${id}`);
         fetchReviews();
     }
 

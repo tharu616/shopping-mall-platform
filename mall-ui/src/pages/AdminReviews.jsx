@@ -22,7 +22,7 @@ export default function AdminReviews() {
     async function fetchReviews() {
         setLoading(true);
         try {
-            const res = await API.get("/reviews/admin/all");
+            const res = await API.get("/api/reviews/admin/all");
             setReviews(res.data);
         } catch (err) {
             setMsg("Failed to load reviews");
@@ -32,7 +32,7 @@ export default function AdminReviews() {
 
     async function handleAction(reviewId, action) {
         try {
-            await API.put(`/reviews/admin/${reviewId}/action`, { action });
+            await API.put(`/api/reviews/admin/${reviewId}/action`, { action });
             setMsg(`✓ Review ${action === "APPROVE" ? "approved" : "rejected"} successfully`);
             fetchReviews();
             setTimeout(() => setMsg(""), 3000);
@@ -45,7 +45,7 @@ export default function AdminReviews() {
         if (!window.confirm("Are you sure you want to delete this review?")) return;
 
         try {
-            await API.delete(`/reviews/admin/${reviewId}`);
+            await API.delete(`/api/reviews/admin/${reviewId}`);
             setMsg("✓ Review deleted successfully");
             fetchReviews();
             setTimeout(() => setMsg(""), 3000);

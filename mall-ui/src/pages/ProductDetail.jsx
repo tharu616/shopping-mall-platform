@@ -18,6 +18,9 @@ export default function ProductDetail() {
     const [comment, setComment] = useState("");
     const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewMsg, setReviewMsg] = useState("");
+    // near other useState hooks for review form
+    const [reviewErrors, setReviewErrors] = useState({ rating: "", comment: "" });
+
 
     useEffect(() => {
         loadProduct();
@@ -37,7 +40,7 @@ export default function ProductDetail() {
 
     async function loadReviews() {
         try {
-            const res = await API.get(`/reviews/product/${id}`);
+            const res = await API.get(`/api/reviews/product/${id}`);
             setReviews(res.data);
         } catch (err) {
             console.error("Failed to load reviews", err);
@@ -64,6 +67,15 @@ export default function ProductDetail() {
     async function handleReviewSubmit(e) {
         e.preventDefault();
 
+        // assume you already have rating and comment variables in state
+        const errors = validateReviewForm(rating, comment);
+        setReviewErrors(errors);
+
+        const hasErrors = Object.values(errors).some(Boolean);
+        if (hasErrors) {
+            return; // stop here, do not call API
+        }
+
         if (!token) {
             setReviewMsg("Please login to submit a review");
             return;
@@ -73,7 +85,7 @@ export default function ProductDetail() {
         setReviewMsg("");
 
         try {
-            await API.post("/reviews", {
+            await API.post("/api/reviews", {
                 productId: parseInt(id),
                 rating: rating,
                 comment: comment.trim()
@@ -92,6 +104,24 @@ export default function ProductDetail() {
             setSubmittingReview(false);
         }
     }
+    function validateReviewForm(rating, comment) {
+        const errors = { rating: "", comment: "" };
+        const r = Number(rating);
+
+        if (!Number.isInteger(r) || r < 1 || r > 5) {
+            errors.rating = "Please select a rating from 1 to 5.";
+        }
+        const text = (comment ?? "").trim();
+        if (!text) {
+            errors.comment = "Comment is required.";
+        } else if (text.length < 10) {
+            errors.comment = "Comment must be at least 10 characters.";
+        } else if (text.length > 1000) {
+            errors.comment = "Comment must be at most 1000 characters.";
+        }
+        return errors;
+    }
+
 
     const getStars = (r) => {
         return "⭐".repeat(r) + "☆".repeat(5 - r);
@@ -574,6 +604,22 @@ export default function ProductDetail() {
                             )}
                         </form>
                     )}
+                    {/* Rating input */}
+                    <div className="field">
+                        {/* ...your existing rating input/select... */}
+                        {reviewErrors.rating && (
+                            <p className="text-red-600 text-sm mt-1">{reviewErrors.rating}</p>
+                        )}
+                    </div>
+
+                    {/* Comment textarea */}
+                    <div className="field">
+                        {/* ...your existing textarea... */}
+                        {reviewErrors.comment && (
+                            <p className="text-red-600 text-sm mt-1">{reviewErrors.comment}</p>
+                        )}
+                    </div>
+
 
                     {/* Reviews List */}
                     <div style={{ display: "grid", gap: "20px" }}>

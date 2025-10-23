@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 export default function Orders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [ordersErrors, setOrdersErrors] = useState({});
 
     useEffect(() => {
         API.get("/orders")
@@ -16,6 +17,30 @@ export default function Orders() {
                 setLoading(false);
             });
     }, []);
+
+    // Validation helpers
+    function validateOrder(order) {
+        if (!order || !order.id) return "Invalid order data.";
+        if (!order.status) return "Order status is missing.";
+        if (order.total == null || order.total < 0) return "Invalid order total.";
+        if (!order.items || order.items.length === 0) return "Order has no items.";
+        return "";
+    }
+
+    function validateOrders(ordersList) {
+        const errors = {};
+        for (const ord of ordersList || []) {
+            const err = validateOrder(ord);
+            if (err) errors[ord.id] = err;
+        }
+        return errors;
+    }
+
+    // Revalidate when orders change
+    useEffect(() => {
+        const errs = validateOrders(orders);
+        setOrdersErrors(errs);
+    }, [orders]);
 
     // Helper function to get status color and icon
     const getStatusStyle = (status) => {
@@ -134,12 +159,14 @@ export default function Orders() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                     {orders.map(order => {
                         const statusStyle = getStatusStyle(order.status);
+                        const orderErr = ordersErrors[order.id];
+
                         return (
                             <div key={order.id} style={{
                                 background: "rgba(255, 255, 255, 0.8)",
                                 backdropFilter: "blur(20px)",
                                 WebkitBackdropFilter: "blur(20px)",
-                                border: "1px solid rgba(255,255,255,0.3)",
+                                border: orderErr ? "2px solid #dc3545" : "1px solid rgba(255,255,255,0.3)",
                                 borderRadius: "20px",
                                 padding: "30px",
                                 boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
@@ -235,32 +262,48 @@ export default function Orders() {
 
                                     {/* View Details Button */}
                                     <Link to={`/orders/${order.id}`} style={{ textDecoration: "none" }}>
-                                        <button style={{
-                                            padding: "12px 24px",
-                                            background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                            color: "white",
-                                            border: "none",
-                                            borderRadius: "12px",
-                                            fontSize: "14px",
-                                            fontWeight: "700",
-                                            cursor: "pointer",
-                                            boxShadow: "0 4px 15px rgba(30,144,255,0.3)",
-                                            transition: "all 0.3s",
-                                            whiteSpace: "nowrap"
-                                        }}
-                                                onMouseEnter={(e) => {
+                                        <button
+                                            disabled={!!orderErr}
+                                            style={{
+                                                padding: "12px 24px",
+                                                background: orderErr
+                                                    ? "#ccc"
+                                                    : "linear-gradient(135deg, #1E90FF, #4B368B)",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "12px",
+                                                fontSize: "14px",
+                                                fontWeight: "700",
+                                                cursor: orderErr ? "not-allowed" : "pointer",
+                                                boxShadow: orderErr ? "none" : "0 4px 15px rgba(30,144,255,0.3)",
+                                                transition: "all 0.3s",
+                                                whiteSpace: "nowrap"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (!orderErr) {
                                                     e.target.style.transform = "scale(1.05)";
                                                     e.target.style.boxShadow = "0 6px 20px rgba(30,144,255,0.4)";
-                                                }}
-                                                onMouseLeave={(e) => {
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!orderErr) {
                                                     e.target.style.transform = "scale(1)";
                                                     e.target.style.boxShadow = "0 4px 15px rgba(30,144,255,0.3)";
-                                                }}
+                                                }
+                                            }}
+                                            title={orderErr || "View order details"}
                                         >
                                             View Details →
                                         </button>
                                     </Link>
                                 </div>
+
+                                {/* Inline order error */}
+                                {orderErr && (
+                                    <p style={{ color: "#dc3545", fontSize: 14, marginTop: 16 }}>
+                                        {orderErr}
+                                    </p>
+                                )}
                             </div>
                         );
                     })}
