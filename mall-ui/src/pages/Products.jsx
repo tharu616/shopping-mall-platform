@@ -174,7 +174,7 @@ export default function Products() {
     );
 }
 
-// Product Card Component
+// ✨ Product Card Component with IMAGE DISPLAY
 function ProductCard({ product }) {
     return (
         <Link to={`/products/${product.id}`} style={{ textDecoration: "none" }}>
@@ -198,17 +198,35 @@ function ProductCard({ product }) {
                      e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.08)";
                  }}
             >
-                {/* Product Image */}
+                {/* ✨ Product Image - NEW! */}
                 <div style={{
                     height: "240px",
-                    background: "linear-gradient(135deg, #f5f7fa 0%, #e8ebf0 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "80px",
-                    position: "relative"
+                    position: "relative",
+                    overflow: "hidden"
                 }}>
-                    📦
+                    {product.imageUrl ? (
+                        <img
+                            src={`http://localhost:8081${product.imageUrl}?t=${new Date().getTime()}`}
+                            alt={product.name}
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover"
+                            }}
+                        />
+                    ) : (
+                        <div style={{
+                            width: "100%",
+                            height: "100%",
+                            background: "linear-gradient(135deg, #f5f7fa 0%, #e8ebf0 100%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "80px"
+                        }}>
+                            📦
+                        </div>
+                    )}
 
                     {/* Stock Badge */}
                     {product.stock <= 10 && product.stock > 0 ? (

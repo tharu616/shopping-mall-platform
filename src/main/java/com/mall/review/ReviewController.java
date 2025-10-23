@@ -1,59 +1,93 @@
 package com.mall.review;
 
-import com.mall.review.dto.*;
+import com.mall.review.dto.CreateReviewRequest;
+import com.mall.review.dto.ReviewActionRequest;
+import com.mall.review.dto.ReviewDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/reviews")
+@RequestMapping("/api/reviews")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5174")
 public class ReviewController {
-    private final ReviewService service;
 
-    // Public - Get approved reviews for a product
-    @GetMapping("/product/{productId}")
-    public List<ReviewDto> getProductReviews(@PathVariable Long productId) {
-        return service.getProductReviews(productId);
-    }
+    private final ReviewService reviewService;
 
-    // Customer - Get own reviews
-    @GetMapping("/mine")
-    public List<ReviewDto> getMyReviews(@AuthenticationPrincipal UserDetails principal) {
-        return service.getUserReviews(principal.getUsername());
-    }
-
-    // Customer - Create review
+    // Create review (authenticated users)
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ReviewDto> createReview(
-            @AuthenticationPrincipal UserDetails principal,
-            @RequestBody CreateReviewRequest req) {
-        return ResponseEntity.ok(service.createReview(principal.getUsername(), req));
+            @RequestBody CreateReviewRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        ReviewDto review = reviewService.createReview(request, userDetails.getUsername());
+        return ResponseEntity.ok(review);
     }
 
-    // Admin - Get pending reviews
-    @GetMapping("/pending")
-    public List<ReviewDto> getPendingReviews() {
-        return service.getPendingReviews();
+    // Get all reviews for a product (public - only approved)
+    @GetMapping("/product/{productId}")
+    public ResponseEntity<List<ReviewDto>> getProductReviews(@PathVariable Long productId) {
+        List<ReviewDto> reviews = reviewService.getApprovedReviewsByProduct(productId);
+        return ResponseEntity.ok(reviews);
     }
 
-    // Admin - Approve review
-    @PatchMapping("/{id}/approve")
-    public ResponseEntity<ReviewDto> approveReview(
-            @PathVariable Long id,
-            @RequestBody ReviewActionRequest req) {
-        return ResponseEntity.ok(service.approveReview(id, req));
+    // Get my reviews (authenticated users)
+    @GetMapping("/my-reviews")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ReviewDto>> getMyReviews(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        List<ReviewDto> reviews = reviewService.getMyReviews(userDetails.getUsername());
+        return ResponseEntity.ok(reviews);
     }
 
-    // Admin - Reject/Delete review
-    @DeleteMapping("/{id}/reject")
-    public ResponseEntity<Void> rejectReview(
-            @PathVariable Long id,
-            @RequestBody ReviewActionRequest req) {
-        service.rejectReview(id, req);
-        return ResponseEntity.noContent().build();
+    // Get all reviews (admin only)
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<ReviewDto>> getAllReviews() {
+        List<ReviewDto> reviews = reviewService.getAllReviews();
+        return ResponseEntity.ok(reviews);
+    }
+
+    // Get pending reviews (admin only)
+    @GetMapping("/admin/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<ReviewDto>> getPendingReviews() {
+        List<ReviewDto> reviews = reviewService.getPendingReviews();
+        return ResponseEntity.ok(reviews);
+    }
+
+    // Approve/Reject review (admin only)
+    @PutMapping("/admin/{reviewId}/action")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ReviewDto> handleReviewAction(
+            @PathVariable Long reviewId,
+            @RequestBody ReviewActionRequest request
+    ) {
+        ReviewDto review;
+        if ("APPROVE".equalsIgnoreCase(request.getAction())) {
+            review = reviewService.approveReview(reviewId);
+        } else if ("REJECT".equalsIgnoreCase(request.getAction())) {
+            review = reviewService.rejectReview(reviewId);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(review);
+    }
+
+    // Delete review (admin only)
+    @DeleteMapping("/admin/{reviewId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteReview(@PathVariable Long reviewId) {
+        reviewService.deleteReview(reviewId);
+        return ResponseEntity.ok().build();
     }
 }

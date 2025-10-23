@@ -1,527 +1,622 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import API from "../api";
 
 export default function UploadPayment() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
-    const [formData, setFormData] = useState({
-        orderId: "",
-        amount: "",
-        reference: "",
-        receiptUrl: "",
-        paymentMethod: "" // This is the key field
-    });
-    const [msg, setMsg] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [file, setFile] = useState(null);
-    const [filePreview, setFilePreview] = useState(null);
+    const [selectedOrder, setSelectedOrder] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState("");
+    const [amount, setAmount] = useState("");
+    const [reference, setReference] = useState("");
+    const [receiptFile, setReceiptFile] = useState(null);
+    const [receiptUrl, setReceiptUrl] = useState("");
 
-    const paymentMethods = [
-        { id: "card", name: "Credit/Debit Card", icon: "💳" },
-        { id: "bank_transfer", name: "Bank Transfer", icon: "🏦" },
-        { id: "paypal", name: "PayPal", icon: "💰" },
-        { id: "cash_on_delivery", name: "Cash on Delivery", icon: "💵" }
-    ];
+    // Card fields
+    const [cardNumber, setCardNumber] = useState("");
+    const [cardHolderName, setCardHolderName] = useState("");
+    const [cardExpiryDate, setCardExpiryDate] = useState("");
+    const [cardCvv, setCardCvv] = useState("");
+
+    // Bank fields
+    const [bankName, setBankName] = useState("");
+    const [accountNumber, setAccountNumber] = useState("");
+    const [accountHolderName, setAccountHolderName] = useState("");
+    const [branchCode, setBranchCode] = useState("");
+    const [transferDate, setTransferDate] = useState("");
+
+    // PayPal fields
+    const [paypalEmail, setPaypalEmail] = useState("");
+    const [paypalTransactionId, setPaypalTransactionId] = useState("");
+
+    const [loading, setLoading] = useState(false);
+    const [loadingOrders, setLoadingOrders] = useState(true);
+    const [message, setMessage] = useState("");
 
     useEffect(() => {
-        API.get("/orders")
-            .then(res => setOrders(res.data))
-            .catch(() => setMsg("Failed to load orders."));
+        fetchOrders();
     }, []);
 
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-    };
+    async function fetchOrders() {
+        setLoadingOrders(true);
+        try {
+            const res = await API.get("/orders/me");
+            console.log("Orders API Response:", res.data); // ADD THIS FOR DEBUGGING
 
-    // **FIX: Separate handler for payment method selection**
-    const handlePaymentMethodSelect = (methodId) => {
-        setFormData({
-            ...formData,
-            paymentMethod: methodId
-        });
-    };
+            // Filter out only DELIVERED and CANCELLED orders
+            // PENDING, CONFIRMED, SHIPPED should all show
+            const availableOrders = res.data.filter(o =>
+                o.status !== "CANCELLED" && o.status !== "DELIVERED"
+            );
 
-    const handleFileChange = (e) => {
-        const selectedFile = e.target.files[0];
-        if (selectedFile) {
-            setFile(selectedFile);
+            console.log("Filtered available orders:", availableOrders); // ADD THIS FOR DEBUGGING
+            setOrders(availableOrders);
 
-            // Create preview for images
-            if (selectedFile.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setFilePreview(reader.result);
-                };
-                reader.readAsDataURL(selectedFile);
-            } else {
-                setFilePreview(null);
+            if (availableOrders.length === 0) {
+                setMessage("ℹ️ No orders available for payment");
             }
+        } catch (err) {
+            console.error("Error fetching orders:", err);
+            setMessage("❌ Failed to load orders: " + (err.response?.data?.message || err.message));
+        } finally {
+            setLoadingOrders(false);
         }
-    };
+    }
 
-    const handleSubmit = async (e) => {
+
+    async function handleSubmit(e) {
         e.preventDefault();
-        setMsg("");
         setLoading(true);
-
-        // Validation
-        if (!formData.orderId || !formData.amount || !formData.reference || !formData.paymentMethod) {
-            setMsg("All fields including payment method are required.");
-            setLoading(false);
-            return;
-        }
-
-        if (!formData.receiptUrl && !file) {
-            setMsg("Please provide a receipt URL or upload a file.");
-            setLoading(false);
-            return;
-        }
+        setMessage("");
 
         try {
-            // In a real app, you would upload the file to a cloud service here
-            const receiptUrl = formData.receiptUrl || (file ? `uploaded_${file.name}` : "");
+            const payload = {
+                orderId: parseInt(selectedOrder),
+                paymentMethod,
+                amount: parseFloat(amount),
+                reference: reference || undefined,
+                receiptUrl: receiptUrl || undefined,
 
-            await API.post("/payments/upload", {
-                orderId: parseInt(formData.orderId),
-                amount: parseFloat(formData.amount),
-                reference: formData.reference.trim(),
-                receiptUrl: receiptUrl,
-                paymentMethod: formData.paymentMethod
-            });
+                // Card fields
+                ...(paymentMethod === "CARD" && {
+                    cardNumber,
+                    cardHolderName,
+                    cardExpiryDate,
+                    cardCvv
+                }),
 
-            setMsg("✓ Payment uploaded successfully!");
-            setTimeout(() => navigate("/payments"), 1500);
+                // Bank fields
+                ...(paymentMethod === "BANK_TRANSFER" && {
+                    bankName,
+                    accountNumber,
+                    accountHolderName,
+                    branchCode,
+                    transferDate
+                }),
+
+                // PayPal fields
+                ...(paymentMethod === "PAYPAL" && {
+                    paypalEmail,
+                    paypalTransactionId
+                })
+            };
+
+            console.log("Submitting payment:", payload); // Debug log
+            await API.post("/payments/upload", payload);
+            setMessage("✓ Payment submitted successfully!");
+            setTimeout(() => navigate("/payments"), 2000);
         } catch (err) {
-            console.error("Upload error:", err);
-            const errorMsg = err.response?.data?.message || "Failed to upload payment.";
-            setMsg(errorMsg);
+            console.error("Payment error:", err);
+            setMessage("❌ " + (err.response?.data?.message || "Failed to submit payment"));
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
-    };
+    }
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
-            padding: "60px 20px"
-        }}>
-            <div style={{ maxWidth: "700px", margin: "0 auto" }}>
-                {/* Breadcrumb */}
-                <div style={{ marginBottom: "30px" }}>
-                    <Link to="/payments" style={{
-                        color: "#1E90FF",
-                        textDecoration: "none",
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "8px"
-                    }}>
-                        ← Back to Payments
-                    </Link>
-                </div>
+        <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px" }}>
+            <button
+                onClick={() => navigate("/payments")}
+                style={{
+                    background: "white",
+                    border: "2px solid #e0e0e0",
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    marginBottom: "20px"
+                }}
+            >
+                ← Back to Payments
+            </button>
 
-                {/* Header */}
-                <div style={{ marginBottom: "30px" }}>
-                    <h1 style={{
-                        fontSize: "36px",
-                        fontWeight: "800",
-                        color: "#1A1A2E",
-                        marginBottom: "8px"
-                    }}>
-                        💳 Upload Payment Receipt
-                    </h1>
-                    <p style={{ color: "#666", fontSize: "16px" }}>
-                        Submit your payment proof for order verification
-                    </p>
-                </div>
+            <div style={{
+                background: "white",
+                padding: "40px",
+                borderRadius: "16px",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+            }}>
+                <h2 style={{ marginBottom: "10px" }}>💳 Upload Payment Receipt</h2>
+                <p style={{ color: "#666", marginBottom: "30px" }}>
+                    Submit your payment proof for order verification
+                </p>
 
-                {/* Form - Glassmorphism */}
-                <form onSubmit={handleSubmit} style={{
-                    background: "rgba(255, 255, 255, 0.8)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: "24px",
-                    padding: "40px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
-                }}>
+                <form onSubmit={handleSubmit}>
                     {/* Select Order */}
-                    <div style={{ marginBottom: "24px" }}>
-                        <label style={{
-                            display: "block",
-                            fontWeight: "700",
-                            color: "#1A1A2E",
-                            marginBottom: "10px",
-                            fontSize: "15px"
-                        }}>
-                            Select Order <span style={{ color: "#dc3545" }}>*</span>
+                    <div style={{ marginBottom: "20px" }}>
+                        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                            Select Order *
                         </label>
-                        <select
-                            name="orderId"
-                            value={formData.orderId}
-                            onChange={handleChange}
-                            required
-                            style={{
-                                width: "100%",
-                                padding: "14px 18px",
-                                borderRadius: "12px",
-                                border: "2px solid rgba(30,144,255,0.3)",
-                                background: "rgba(255,255,255,0.9)",
-                                fontSize: "15px",
-                                fontWeight: "600",
-                                color: "#1A1A2E",
-                                cursor: "pointer",
-                                outline: "none"
-                            }}
-                        >
-                            <option value="">-- Select an Order --</option>
-                            {orders.map(order => (
-                                <option key={order.id} value={order.id}>
-                                    Order #{order.id} - ${order.total} ({order.status})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                        {loadingOrders ? (
+                            <div style={{ padding: "12px", textAlign: "center", color: "#666" }}>
+                                Loading orders...
+                            </div>
+                        ) : (
+                            <select
+                                value={selectedOrder}
+                                onChange={(e) => {
+                                    const orderId = e.target.value;
+                                    setSelectedOrder(orderId);
+                                    // Auto-fill amount from selected order
+                                    const order = orders.find(o => o.id === parseInt(orderId));
+                                    if (order && order.totalAmount) {
+                                        setAmount(order.totalAmount.toString());
+                                    }
+                                }}
+                                required
+                                style={{
+                                    width: "100%",
+                                    padding: "12px",
+                                    border: "2px solid #e0e0e0",
+                                    borderRadius: "8px",
+                                    fontSize: "16px"
+                                }}
+                            >
+                                <option value="">-- Select an Order ({orders.length} available) --</option>
+                                {orders.map(order => (
+                                    <option key={order.id} value={order.id}>
+                                        Order #{order.id} - ${(order.totalAmount || 0).toFixed(2)} - {order.status}
+                                    </option>
+                                ))}
+                            </select>
 
-                    {/* Payment Method Selection - FIXED */}
-                    <div style={{ marginBottom: "24px" }}>
-                        <label style={{
-                            display: "block",
-                            fontWeight: "700",
-                            color: "#1A1A2E",
-                            marginBottom: "12px",
-                            fontSize: "15px"
-                        }}>
-                            Payment Method <span style={{ color: "#dc3545" }}>*</span>
-                        </label>
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                            gap: "12px"
-                        }}>
-                            {paymentMethods.map(method => {
-                                const isSelected = formData.paymentMethod === method.id;
-                                return (
-                                    <div
-                                        key={method.id}
-                                        onClick={() => handlePaymentMethodSelect(method.id)}
-                                        style={{
-                                            padding: "18px 16px",
-                                            borderRadius: "14px",
-                                            border: isSelected
-                                                ? "3px solid #1E90FF"
-                                                : "2px solid rgba(30,144,255,0.2)",
-                                            background: isSelected
-                                                ? "linear-gradient(135deg, rgba(30,144,255,0.15), rgba(75,54,139,0.15))"
-                                                : "rgba(255,255,255,0.7)",
-                                            cursor: "pointer",
-                                            textAlign: "center",
-                                            transition: "all 0.3s ease",
-                                            backdropFilter: "blur(10px)",
-                                            boxShadow: isSelected ? "0 4px 15px rgba(30,144,255,0.3)" : "0 2px 8px rgba(0,0,0,0.05)",
-                                            transform: isSelected ? "scale(1.05)" : "scale(1)",
-                                            userSelect: "none"
-                                        }}
-                                    >
-                                        <div style={{ fontSize: "36px", marginBottom: "10px" }}>
-                                            {method.icon}
-                                        </div>
-                                        <div style={{
-                                            fontSize: "13px",
-                                            fontWeight: "700",
-                                            color: isSelected ? "#1E90FF" : "#666",
-                                            lineHeight: "1.3"
-                                        }}>
-                                            {method.name}
-                                        </div>
-                                        {isSelected && (
-                                            <div style={{
-                                                marginTop: "8px",
-                                                fontSize: "18px",
-                                                color: "#4CAF50"
-                                            }}>
-                                                ✓
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        {formData.paymentMethod && (
-                            <small style={{
-                                display: "block",
-                                marginTop: "10px",
-                                color: "#4CAF50",
-                                fontWeight: "600",
-                                fontSize: "13px"
-                            }}>
-                                ✓ Selected: {paymentMethods.find(m => m.id === formData.paymentMethod)?.name}
+                        )}
+                        {orders.length === 0 && !loadingOrders && (
+                            <small style={{ color: "#999", display: "block", marginTop: "5px" }}>
+                                No orders available. Please place an order first.
                             </small>
                         )}
                     </div>
 
-                    {/* Amount Paid */}
-                    <div style={{ marginBottom: "24px" }}>
-                        <label style={{
-                            display: "block",
-                            fontWeight: "700",
-                            color: "#1A1A2E",
-                            marginBottom: "10px",
-                            fontSize: "15px"
-                        }}>
-                            Amount Paid <span style={{ color: "#dc3545" }}>*</span>
+                    {/* Payment Method */}
+                    <div style={{ marginBottom: "20px" }}>
+                        <label style={{ display: "block", marginBottom: "12px", fontWeight: "600" }}>
+                            Payment Method *
+                        </label>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "15px" }}>
+                            {[
+                                { value: "CARD", icon: "💳", label: "Credit/Debit Card" },
+                                { value: "BANK_TRANSFER", icon: "🏦", label: "Bank Transfer" },
+                                { value: "PAYPAL", icon: "💰", label: "PayPal" },
+                                { value: "CASH_ON_DELIVERY", icon: "💵", label: "Cash on Delivery" }
+                            ].map(method => (
+                                <div
+                                    key={method.value}
+                                    onClick={() => setPaymentMethod(method.value)}
+                                    style={{
+                                        padding: "20px",
+                                        border: paymentMethod === method.value ? "3px solid #3b82f6" : "2px solid #e0e0e0",
+                                        borderRadius: "12px",
+                                        cursor: "pointer",
+                                        textAlign: "center",
+                                        background: paymentMethod === method.value ? "#eff6ff" : "white",
+                                        transition: "all 0.3s"
+                                    }}
+                                >
+                                    <div style={{ fontSize: "32px", marginBottom: "8px" }}>{method.icon}</div>
+                                    <div style={{ fontWeight: "600" }}>{method.label}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Amount */}
+                    <div style={{ marginBottom: "20px" }}>
+                        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                            Amount Paid *
                         </label>
                         <input
                             type="number"
-                            name="amount"
-                            value={formData.amount}
-                            onChange={handleChange}
-                            placeholder="e.g., 1095.00"
                             step="0.01"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            placeholder="e.g., 1095.00"
                             required
                             style={{
                                 width: "100%",
-                                padding: "14px 18px",
-                                borderRadius: "12px",
-                                border: "2px solid rgba(30,144,255,0.3)",
-                                background: "rgba(255,255,255,0.9)",
-                                fontSize: "16px",
-                                fontWeight: "600",
-                                color: "#1A1A2E",
-                                outline: "none"
+                                padding: "12px",
+                                border: "2px solid #e0e0e0",
+                                borderRadius: "8px",
+                                fontSize: "16px"
                             }}
                         />
                     </div>
 
                     {/* Payment Reference */}
-                    <div style={{ marginBottom: "24px" }}>
-                        <label style={{
-                            display: "block",
-                            fontWeight: "700",
-                            color: "#1A1A2E",
-                            marginBottom: "10px",
-                            fontSize: "15px"
-                        }}>
-                            Payment Reference / Transaction ID <span style={{ color: "#dc3545" }}>*</span>
+                    <div style={{ marginBottom: "20px" }}>
+                        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                            Payment Reference / Transaction ID
                         </label>
                         <input
                             type="text"
-                            name="reference"
-                            value={formData.reference}
-                            onChange={handleChange}
+                            value={reference}
+                            onChange={(e) => setReference(e.target.value)}
                             placeholder="e.g., TXN123456789"
-                            required
                             style={{
                                 width: "100%",
-                                padding: "14px 18px",
-                                borderRadius: "12px",
-                                border: "2px solid rgba(30,144,255,0.3)",
-                                background: "rgba(255,255,255,0.9)",
-                                fontSize: "15px",
-                                color: "#1A1A2E",
-                                outline: "none"
+                                padding: "12px",
+                                border: "2px solid #e0e0e0",
+                                borderRadius: "8px",
+                                fontSize: "16px"
                             }}
                         />
-                        <small style={{ color: "#666", fontSize: "13px", marginTop: "6px", display: "block" }}>
+                        <small style={{ color: "#999" }}>
                             Enter your bank transfer reference or transaction ID
                         </small>
                     </div>
 
-                    {/* Receipt Upload Options */}
-                    <div style={{
-                        padding: "24px",
-                        background: "linear-gradient(135deg, rgba(30,144,255,0.05), rgba(75,54,139,0.05))",
-                        borderRadius: "16px",
-                        border: "2px dashed rgba(30,144,255,0.3)",
-                        marginBottom: "24px"
-                    }}>
-                        <h3 style={{
-                            fontSize: "16px",
-                            fontWeight: "700",
-                            color: "#1A1A2E",
-                            marginBottom: "16px"
+                    {/* === CARD PAYMENT FIELDS === */}
+                    {paymentMethod === "CARD" && (
+                        <div style={{
+                            padding: "20px",
+                            background: "#f8fafc",
+                            borderRadius: "12px",
+                            marginBottom: "20px"
                         }}>
-                            📄 Upload Receipt (Choose one option)
-                        </h3>
+                            <h3 style={{ marginBottom: "20px" }}>💳 Card Details</h3>
 
-                        {/* File Upload */}
-                        <div style={{ marginBottom: "20px" }}>
-                            <label style={{
-                                display: "block",
-                                fontWeight: "600",
-                                color: "#666",
-                                marginBottom: "10px",
-                                fontSize: "14px"
-                            }}>
-                                Option 1: Upload File (Image/PDF)
-                            </label>
-                            <input
-                                type="file"
-                                accept="image/*,.pdf"
-                                onChange={handleFileChange}
-                                style={{
-                                    width: "100%",
-                                    padding: "12px",
-                                    borderRadius: "10px",
-                                    border: "2px solid rgba(30,144,255,0.3)",
-                                    background: "rgba(255,255,255,0.9)",
-                                    cursor: "pointer",
-                                    fontSize: "14px"
-                                }}
-                            />
-                            {filePreview && (
-                                <div style={{ marginTop: "12px", textAlign: "center" }}>
-                                    <img
-                                        src={filePreview}
-                                        alt="Receipt preview"
+                            <div style={{ marginBottom: "15px" }}>
+                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                    Card Number *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={cardNumber}
+                                    onChange={(e) => setCardNumber(e.target.value.replace(/\s/g, ''))}
+                                    placeholder="1234 5678 9012 3456"
+                                    maxLength="16"
+                                    required
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        border: "2px solid #e0e0e0",
+                                        borderRadius: "8px",
+                                        fontSize: "16px"
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: "15px" }}>
+                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                    Cardholder Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={cardHolderName}
+                                    onChange={(e) => setCardHolderName(e.target.value)}
+                                    placeholder="John Doe"
+                                    required
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        border: "2px solid #e0e0e0",
+                                        borderRadius: "8px",
+                                        fontSize: "16px"
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "15px" }}>
+                                <div>
+                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                        Expiry Date *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={cardExpiryDate}
+                                        onChange={(e) => setCardExpiryDate(e.target.value)}
+                                        placeholder="MM/YY"
+                                        maxLength="5"
+                                        required
                                         style={{
-                                            maxWidth: "100%",
-                                            maxHeight: "200px",
-                                            borderRadius: "10px",
-                                            boxShadow: "0 4px 15px rgba(0,0,0,0.1)"
+                                            width: "100%",
+                                            padding: "12px",
+                                            border: "2px solid #e0e0e0",
+                                            borderRadius: "8px",
+                                            fontSize: "16px"
                                         }}
                                     />
-                                    <p style={{ marginTop: "8px", color: "#4CAF50", fontWeight: "600", fontSize: "13px" }}>
-                                        ✓ File selected: {file?.name}
-                                    </p>
                                 </div>
-                            )}
+                                <div>
+                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                        CVV *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={cardCvv}
+                                        onChange={(e) => setCardCvv(e.target.value)}
+                                        placeholder="123"
+                                        maxLength="3"
+                                        required
+                                        style={{
+                                            width: "100%",
+                                            padding: "12px",
+                                            border: "2px solid #e0e0e0",
+                                            borderRadius: "8px",
+                                            fontSize: "16px"
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
+                    )}
 
+                    {/* === BANK TRANSFER FIELDS === */}
+                    {paymentMethod === "BANK_TRANSFER" && (
                         <div style={{
-                            textAlign: "center",
-                            padding: "8px 0",
-                            color: "#999",
-                            fontWeight: "600",
-                            fontSize: "14px"
+                            padding: "20px",
+                            background: "#f8fafc",
+                            borderRadius: "12px",
+                            marginBottom: "20px"
                         }}>
-                            — OR —
-                        </div>
+                            <h3 style={{ marginBottom: "20px" }}>🏦 Bank Transfer Details</h3>
 
-                        {/* URL Input */}
-                        <div>
-                            <label style={{
-                                display: "block",
-                                fontWeight: "600",
-                                color: "#666",
-                                marginBottom: "10px",
-                                fontSize: "14px"
-                            }}>
-                                Option 2: Paste Receipt URL
-                            </label>
-                            <input
-                                type="url"
-                                name="receiptUrl"
-                                value={formData.receiptUrl}
-                                onChange={handleChange}
-                                placeholder="https://example.com/receipt.jpg"
-                                style={{
-                                    width: "100%",
-                                    padding: "12px 16px",
-                                    borderRadius: "10px",
-                                    border: "2px solid rgba(30,144,255,0.3)",
-                                    background: "rgba(255,255,255,0.9)",
-                                    fontSize: "14px",
-                                    outline: "none"
-                                }}
-                            />
-                            <small style={{ color: "#666", fontSize: "12px", marginTop: "6px", display: "block" }}>
-                                Upload to Google Drive, Imgur, etc., and paste the link here
-                            </small>
+                            <div style={{ marginBottom: "15px" }}>
+                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                    Bank Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={bankName}
+                                    onChange={(e) => setBankName(e.target.value)}
+                                    placeholder="e.g., Bank of America"
+                                    required
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        border: "2px solid #e0e0e0",
+                                        borderRadius: "8px",
+                                        fontSize: "16px"
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: "15px" }}>
+                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                    Account Number *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={accountNumber}
+                                    onChange={(e) => setAccountNumber(e.target.value)}
+                                    placeholder="1234567890"
+                                    required
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        border: "2px solid #e0e0e0",
+                                        borderRadius: "8px",
+                                        fontSize: "16px"
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: "15px" }}>
+                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                    Account Holder Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={accountHolderName}
+                                    onChange={(e) => setAccountHolderName(e.target.value)}
+                                    placeholder="John Doe"
+                                    required
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        border: "2px solid #e0e0e0",
+                                        borderRadius: "8px",
+                                        fontSize: "16px"
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                                <div>
+                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                        Branch Code
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={branchCode}
+                                        onChange={(e) => setBranchCode(e.target.value)}
+                                        placeholder="001"
+                                        style={{
+                                            width: "100%",
+                                            padding: "12px",
+                                            border: "2px solid #e0e0e0",
+                                            borderRadius: "8px",
+                                            fontSize: "16px"
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                        Transfer Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={transferDate}
+                                        onChange={(e) => setTransferDate(e.target.value)}
+                                        style={{
+                                            width: "100%",
+                                            padding: "12px",
+                                            border: "2px solid #e0e0e0",
+                                            borderRadius: "8px",
+                                            fontSize: "16px"
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: "15px" }}>
+                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                    📎 Upload Receipt (Optional)
+                                </label>
+                                <input
+                                    type="file"
+                                    onChange={(e) => setReceiptFile(e.target.files[0])}
+                                    accept="image/*,.pdf"
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        border: "2px solid #e0e0e0",
+                                        borderRadius: "8px"
+                                    }}
+                                />
+                                <small style={{ color: "#999" }}>
+                                    Upload your bank transfer receipt for verification
+                                </small>
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* === PAYPAL FIELDS === */}
+                    {paymentMethod === "PAYPAL" && (
+                        <div style={{
+                            padding: "20px",
+                            background: "#f8fafc",
+                            borderRadius: "12px",
+                            marginBottom: "20px"
+                        }}>
+                            <h3 style={{ marginBottom: "20px" }}>💰 PayPal Details</h3>
+
+                            <div style={{ marginBottom: "15px" }}>
+                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                    PayPal Email *
+                                </label>
+                                <input
+                                    type="email"
+                                    value={paypalEmail}
+                                    onChange={(e) => setPaypalEmail(e.target.value)}
+                                    placeholder="your@email.com"
+                                    required
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        border: "2px solid #e0e0e0",
+                                        borderRadius: "8px",
+                                        fontSize: "16px"
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: "15px" }}>
+                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                                    PayPal Transaction ID *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={paypalTransactionId}
+                                    onChange={(e) => setPaypalTransactionId(e.target.value)}
+                                    placeholder="e.g., 1AB23456CD789012E"
+                                    required
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        border: "2px solid #e0e0e0",
+                                        borderRadius: "8px",
+                                        fontSize: "16px"
+                                    }}
+                                />
+                                <small style={{ color: "#999" }}>
+                                    Find this in your PayPal transaction history
+                                </small>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* === CASH ON DELIVERY === */}
+                    {paymentMethod === "CASH_ON_DELIVERY" && (
+                        <div style={{
+                            padding: "20px",
+                            background: "#d1fae5",
+                            borderRadius: "12px",
+                            marginBottom: "20px",
+                            textAlign: "center"
+                        }}>
+                            <div style={{ fontSize: "48px", marginBottom: "15px" }}>💵</div>
+                            <h3 style={{ color: "#065f46", marginBottom: "10px" }}>
+                                Cash on Delivery Selected
+                            </h3>
+                            <p style={{ color: "#065f46" }}>
+                                You will pay in cash when your order is delivered. No upfront payment required!
+                            </p>
+                        </div>
+                    )}
 
                     {/* Submit Button */}
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !selectedOrder || !paymentMethod || loadingOrders}
                         style={{
                             width: "100%",
                             padding: "16px",
-                            background: loading
-                                ? "#ccc"
-                                : "linear-gradient(135deg, #4CAF50, #45a049)",
+                            background: (loading || !selectedOrder || !paymentMethod || loadingOrders) ? "#9ca3af" : "#10b981",
                             color: "white",
                             border: "none",
                             borderRadius: "12px",
                             fontSize: "18px",
-                            fontWeight: "700",
-                            cursor: loading ? "not-allowed" : "pointer",
-                            boxShadow: loading ? "none" : "0 8px 24px rgba(76,175,80,0.4)",
-                            transition: "all 0.3s",
-                            marginBottom: "16px"
+                            fontWeight: "600",
+                            cursor: (loading || !selectedOrder || !paymentMethod || loadingOrders) ? "not-allowed" : "pointer",
+                            marginTop: "10px"
                         }}
                     >
-                        {loading ? "⏳ Uploading..." : "✓ Upload Payment"}
+                        {loading ? "⏳ Submitting..." : "✓ Upload Payment"}
                     </button>
 
-                    {/* Cancel Button */}
                     <button
                         type="button"
                         onClick={() => navigate("/payments")}
                         style={{
                             width: "100%",
-                            padding: "14px",
-                            background: "transparent",
-                            color: "#6c757d",
-                            border: "2px solid #6c757d",
+                            padding: "16px",
+                            background: "white",
+                            color: "#333",
+                            border: "2px solid #e0e0e0",
                             borderRadius: "12px",
                             fontSize: "16px",
-                            fontWeight: "700",
+                            fontWeight: "600",
                             cursor: "pointer",
-                            transition: "all 0.3s"
+                            marginTop: "15px"
                         }}
                     >
                         Cancel
                     </button>
 
-                    {/* Message */}
-                    {msg && (
+                    {message && (
                         <div style={{
                             marginTop: "20px",
-                            padding: "16px 20px",
-                            borderRadius: "12px",
-                            background: msg.includes("✓")
-                                ? "rgba(76,175,80,0.15)"
-                                : "rgba(220,53,69,0.15)",
-                            color: msg.includes("✓") ? "#4CAF50" : "#dc3545",
-                            fontWeight: "700",
-                            fontSize: "15px",
-                            border: `2px solid ${msg.includes("✓") ? "#4CAF50" : "#dc3545"}`
+                            padding: "15px",
+                            background: message.includes("✓") ? "#d1fae5" : message.includes("ℹ️") ? "#e0f2fe" : "#fee2e2",
+                            color: message.includes("✓") ? "#065f46" : message.includes("ℹ️") ? "#0369a1" : "#991b1b",
+                            borderRadius: "8px",
+                            textAlign: "center",
+                            fontWeight: "600"
                         }}>
-                            {msg}
+                            {message}
                         </div>
                     )}
                 </form>
-
-                {/* Info Card */}
-                <div style={{
-                    marginTop: "24px",
-                    padding: "20px",
-                    background: "rgba(30,144,255,0.05)",
-                    borderRadius: "16px",
-                    border: "1px solid rgba(30,144,255,0.2)"
-                }}>
-                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                        <span style={{ fontSize: "24px" }}>ℹ️</span>
-                        <div>
-                            <h4 style={{ color: "#1A1A2E", marginBottom: "8px", fontSize: "14px", fontWeight: "700" }}>
-                                Important Information
-                            </h4>
-                            <ul style={{ color: "#666", fontSize: "13px", lineHeight: "1.6", margin: 0, paddingLeft: "20px" }}>
-                                <li>Your payment will be reviewed by admin within 24-48 hours</li>
-                                <li>Ensure the receipt clearly shows the transaction amount and reference</li>
-                                <li>Accepted file formats: JPG, PNG, PDF (max 5MB)</li>
-                                <li>You'll receive a notification once your payment is verified</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

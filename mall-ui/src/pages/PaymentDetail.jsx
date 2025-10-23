@@ -198,7 +198,8 @@ export default function PaymentDetail() {
                         } />
                         <InfoItem label="User Email" value={payment.userEmail} />
                         <InfoItem label="Amount" value={`$${payment.amount}`} gradient={true} />
-                        <InfoItem label="Reference" value={payment.reference} />
+                        <InfoItem label="Reference" value={payment.reference || 'N/A'} />
+                        <InfoItem label="Payment Method" value={payment.paymentMethod || 'N/A'} />
                     </div>
 
                     {payment.adminNote && (
@@ -220,63 +221,65 @@ export default function PaymentDetail() {
                 </div>
 
                 {/* Receipt Display - Glassmorphism */}
-                <div style={{
-                    background: "rgba(255, 255, 255, 0.8)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: "20px",
-                    padding: "30px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                    marginBottom: "24px"
-                }}>
-                    <h3 style={{
-                        fontSize: "20px",
-                        fontWeight: "800",
-                        color: "#1A1A2E",
-                        marginBottom: "20px"
-                    }}>
-                        📄 Payment Receipt
-                    </h3>
-
+                {payment.receiptUrl && (
                     <div style={{
-                        background: "linear-gradient(135deg, rgba(30,144,255,0.05), rgba(75,54,139,0.05))",
-                        borderRadius: "16px",
-                        padding: "20px",
-                        textAlign: "center",
-                        border: "2px dashed rgba(30,144,255,0.3)"
+                        background: "rgba(255, 255, 255, 0.8)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        borderRadius: "20px",
+                        padding: "30px",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+                        marginBottom: "24px"
                     }}>
-                        {payment.receiptUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                            <img
-                                src={payment.receiptUrl}
-                                alt="Payment Receipt"
-                                style={{
-                                    maxWidth: "100%",
-                                    maxHeight: "500px",
-                                    borderRadius: "12px",
-                                    boxShadow: "0 8px 24px rgba(0,0,0,0.15)"
-                                }}
-                            />
-                        ) : (
-                            <a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                                <button style={{
-                                    padding: "14px 32px",
-                                    background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: "12px",
-                                    cursor: "pointer",
-                                    fontSize: "16px",
-                                    fontWeight: "700",
-                                    boxShadow: "0 4px 15px rgba(30,144,255,0.3)",
-                                    transition: "all 0.3s"
-                                }}>
-                                    📥 View Receipt (PDF/Document)
-                                </button>
-                            </a>
-                        )}
+                        <h3 style={{
+                            fontSize: "20px",
+                            fontWeight: "800",
+                            color: "#1A1A2E",
+                            marginBottom: "20px"
+                        }}>
+                            📄 Payment Receipt
+                        </h3>
+
+                        <div style={{
+                            background: "linear-gradient(135deg, rgba(30,144,255,0.05), rgba(75,54,139,0.05))",
+                            borderRadius: "16px",
+                            padding: "20px",
+                            textAlign: "center",
+                            border: "2px dashed rgba(30,144,255,0.3)"
+                        }}>
+                            {payment.receiptUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                                <img
+                                    src={payment.receiptUrl}
+                                    alt="Payment Receipt"
+                                    style={{
+                                        maxWidth: "100%",
+                                        maxHeight: "500px",
+                                        borderRadius: "12px",
+                                        boxShadow: "0 8px 24px rgba(0,0,0,0.15)"
+                                    }}
+                                />
+                            ) : (
+                                <a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                                    <button style={{
+                                        padding: "14px 32px",
+                                        background: "linear-gradient(135deg, #1E90FF, #4B368B)",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "12px",
+                                        cursor: "pointer",
+                                        fontSize: "16px",
+                                        fontWeight: "700",
+                                        boxShadow: "0 4px 15px rgba(30,144,255,0.3)",
+                                        transition: "all 0.3s"
+                                    }}>
+                                        📥 View Receipt (PDF/Document)
+                                    </button>
+                                </a>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Admin Review Section - Glassmorphism */}
                 {payment.status === "PENDING" && (

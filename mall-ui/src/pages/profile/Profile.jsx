@@ -10,8 +10,6 @@ export default function Profile() {
     const [fullName, setFullName] = useState("");
     const [msg, setMsg] = useState("");
     const [loading, setLoading] = useState(false);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteConfirmText, setDeleteConfirmText] = useState("");
     const [profilePicture, setProfilePicture] = useState(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState(null);
     const [uploadingPicture, setUploadingPicture] = useState(false);
@@ -45,11 +43,13 @@ export default function Profile() {
         setLoading(false);
     }
 
+    // ✅ SIMPLE DELETE with window.confirm()
     async function handleDeleteAccount() {
-        if (deleteConfirmText !== "DELETE") {
-            setMsg("Please type DELETE to confirm");
-            return;
-        }
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this account?\n\nThis action is permanent and cannot be undone. All your data, orders, and information will be permanently deleted."
+        );
+
+        if (!confirmed) return;
 
         try {
             await API.delete("/users/me");
@@ -447,7 +447,7 @@ export default function Profile() {
                     </button>
 
                     <button
-                        onClick={() => setShowDeleteModal(true)}
+                        onClick={handleDeleteAccount}
                         style={{
                             padding: "16px",
                             background: "linear-gradient(135deg, #dc3545, #c82333)",
@@ -464,144 +464,6 @@ export default function Profile() {
                         🗑️ Delete Account
                     </button>
                 </div>
-
-                {/* Delete Account Modal */}
-                {showDeleteModal && (
-                    <div style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: "rgba(0,0,0,0.7)",
-                        backdropFilter: "blur(8px)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 1000,
-                        padding: "20px"
-                    }}>
-                        <div style={{
-                            background: "rgba(255, 255, 255, 0.95)",
-                            backdropFilter: "blur(20px)",
-                            borderRadius: "24px",
-                            padding: "40px",
-                            maxWidth: "500px",
-                            width: "100%",
-                            boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-                            border: "2px solid rgba(220,53,69,0.3)"
-                        }}>
-                            <div style={{
-                                fontSize: "64px",
-                                textAlign: "center",
-                                marginBottom: "20px"
-                            }}>
-                                ⚠️
-                            </div>
-
-                            <h2 style={{
-                                fontSize: "28px",
-                                fontWeight: "800",
-                                color: "#dc3545",
-                                textAlign: "center",
-                                marginBottom: "16px"
-                            }}>
-                                Delete Account?
-                            </h2>
-
-                            <p style={{
-                                color: "#666",
-                                fontSize: "15px",
-                                lineHeight: "1.6",
-                                marginBottom: "24px",
-                                textAlign: "center"
-                            }}>
-                                This action is <strong>permanent</strong> and cannot be undone. All your data, orders, and information will be permanently deleted.
-                            </p>
-
-                            <div style={{
-                                padding: "16px",
-                                background: "rgba(220,53,69,0.1)",
-                                borderRadius: "12px",
-                                marginBottom: "24px",
-                                border: "1px solid rgba(220,53,69,0.2)"
-                            }}>
-                                <p style={{
-                                    fontSize: "14px",
-                                    color: "#666",
-                                    marginBottom: "12px",
-                                    fontWeight: "600"
-                                }}>
-                                    Type <strong style={{ color: "#dc3545" }}>DELETE</strong> to confirm:
-                                </p>
-                                <input
-                                    type="text"
-                                    value={deleteConfirmText}
-                                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                                    placeholder="Type DELETE here"
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px 16px",
-                                        borderRadius: "10px",
-                                        border: "2px solid rgba(220,53,69,0.3)",
-                                        background: "rgba(255,255,255,0.9)",
-                                        fontSize: "15px",
-                                        fontWeight: "700",
-                                        outline: "none",
-                                        textTransform: "uppercase"
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{
-                                display: "flex",
-                                gap: "12px"
-                            }}>
-                                <button
-                                    onClick={() => {
-                                        setShowDeleteModal(false);
-                                        setDeleteConfirmText("");
-                                    }}
-                                    style={{
-                                        flex: 1,
-                                        padding: "14px",
-                                        background: "#6c757d",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "12px",
-                                        fontSize: "16px",
-                                        fontWeight: "700",
-                                        cursor: "pointer"
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleDeleteAccount}
-                                    disabled={deleteConfirmText !== "DELETE"}
-                                    style={{
-                                        flex: 1,
-                                        padding: "14px",
-                                        background: deleteConfirmText === "DELETE"
-                                            ? "linear-gradient(135deg, #dc3545, #c82333)"
-                                            : "#ccc",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "12px",
-                                        fontSize: "16px",
-                                        fontWeight: "700",
-                                        cursor: deleteConfirmText === "DELETE" ? "pointer" : "not-allowed",
-                                        boxShadow: deleteConfirmText === "DELETE"
-                                            ? "0 4px 15px rgba(220,53,69,0.4)"
-                                            : "none"
-                                    }}
-                                >
-                                    🗑️ Delete Forever
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Info Card */}
                 <div style={{

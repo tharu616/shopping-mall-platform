@@ -1,3 +1,8 @@
 package com.mall.review.dto;
 
-public record ReviewActionRequest(String adminNote) {}
+import lombok.Data;
+
+@Data
+public class ReviewActionRequest {
+    private String action; // "APPROVE" or "REJECT"
+}

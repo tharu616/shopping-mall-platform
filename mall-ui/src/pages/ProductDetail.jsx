@@ -1,81 +1,101 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import API from "../api";
 import { useAuth } from "../AuthContext";
 
 export default function ProductDetail() {
     const { id } = useParams();
-    const { token, role } = useAuth();
+    const { role, token } = useAuth();
     const navigate = useNavigate();
-
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [qty, setQty] = useState(1);
+    const [quantity, setQuantity] = useState(1);
     const [msg, setMsg] = useState("");
 
+    // ✅ Review states
     const [reviews, setReviews] = useState([]);
-    const [showReviewForm, setShowReviewForm] = useState(false);
-    const [newReview, setNewReview] = useState({ rating: 5, comment: "" });
+    const [rating, setRating] = useState(5);
+    const [comment, setComment] = useState("");
+    const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewMsg, setReviewMsg] = useState("");
 
     useEffect(() => {
-        fetchProduct();
-        fetchReviews();
+        loadProduct();
+        loadReviews();
     }, [id]);
 
-    function fetchProduct() {
-        API.get(`/products/${id}`)
-            .then(res => setProduct(res.data))
-            .catch(() => setError("Product not found"))
-            .finally(() => setLoading(false));
-    }
-
-    function fetchReviews() {
-        API.get(`/reviews/product/${id}`)
-            .then(res => setReviews(res.data))
-            .catch(() => console.error("Failed to load reviews"));
-    }
-
-    async function handleDelete() {
-        if (window.confirm("Delete this product?")) {
-            await API.delete(`/products/${id}`);
-            navigate("/products");
-        }
-    }
-
-    async function handleAddToCart() {
+    async function loadProduct() {
         try {
-            await API.post("/cart/items", { productId: product.id, quantity: qty });
-            setMsg("✓ Added to cart!");
-            setTimeout(() => setMsg(""), 3000);
-        } catch {
-            setMsg("Failed to add to cart.");
+            const res = await API.get(`/products/${id}`);
+            setProduct(res.data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
     }
 
-    const handleSubmitReview = async (e) => {
+    async function loadReviews() {
+        try {
+            const res = await API.get(`/reviews/product/${id}`);
+            setReviews(res.data);
+        } catch (err) {
+            console.error("Failed to load reviews", err);
+        }
+    }
+
+    async function addToCart() {
+        try {
+            await API.post("/cart/items", {
+                productId: parseInt(id),
+                quantity: quantity
+            });
+            setMsg("✓ Added to cart successfully!");
+            setTimeout(() => setMsg(""), 3000);
+        } catch (err) {
+            console.error("Cart error:", err.response?.data || err.message);
+            const errorMsg = err.response?.data?.message || "Failed to add to cart";
+            setMsg(`❌ ${errorMsg}`);
+            setTimeout(() => setMsg(""), 5000);
+        }
+    }
+
+    // ✅ Submit Review Function
+    async function handleReviewSubmit(e) {
         e.preventDefault();
+
+        if (!token) {
+            setReviewMsg("Please login to submit a review");
+            return;
+        }
+
+        setSubmittingReview(true);
+        setReviewMsg("");
+
         try {
             await API.post("/reviews", {
                 productId: parseInt(id),
-                rating: newReview.rating,
-                comment: newReview.comment.trim()
+                rating: rating,
+                comment: comment.trim()
             });
-            setReviewMsg("✓ Review submitted! Awaiting approval.");
-            setNewReview({ rating: 5, comment: "" });
-            setShowReviewForm(false);
-            setTimeout(() => setReviewMsg(""), 5000);
+            setReviewMsg("✓ Review submitted! It will appear after admin approval.");
+            setRating(5);
+            setComment("");
+            setTimeout(() => {
+                setReviewMsg("");
+                loadReviews();
+            }, 3000);
         } catch (err) {
-            setReviewMsg(err.response?.data?.message || "Failed to submit review.");
+            console.error("Review error:", err.response?.data || err);
+            setReviewMsg("❌ Failed to submit review. " + (err.response?.data?.message || ""));
+        } finally {
+            setSubmittingReview(false);
         }
+    }
+
+    const getStars = (r) => {
+        return "⭐".repeat(r) + "☆".repeat(5 - r);
     };
-
-    const renderStars = (rating) => "⭐".repeat(rating) + "☆".repeat(5 - rating);
-
-    const averageRating = reviews.length > 0
-        ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-        : 0;
 
     if (loading) {
         return (
@@ -84,67 +104,38 @@ export default function ProductDetail() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF, #4B368B)"
+                background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
             }}>
-                <div style={{ color: "white", fontSize: "24px", fontWeight: "600" }}>
-                    Loading product...
+                <div style={{
+                    fontSize: "20px",
+                    fontWeight: "700",
+                    color: "#666"
+                }}>
+                    ⏳ Loading product...
                 </div>
             </div>
         );
     }
 
-    if (error) {
+    if (!product) {
         return (
             <div style={{
                 minHeight: "100vh",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)",
-                position: "relative",
-                overflow: "hidden"
+                background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
             }}>
                 <div style={{
-                    position: "absolute",
-                    top: "-10%",
-                    right: "-5%",
-                    width: "500px",
-                    height: "500px",
-                    background: "radial-gradient(circle, rgba(255,165,0,0.2), transparent 70%)",
-                    borderRadius: "50%",
-                    filter: "blur(80px)"
-                }} />
-
-                <div style={{
-                    background: "rgba(255, 255, 255, 0.15)",
+                    background: "rgba(255,255,255,0.95)",
                     backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    padding: "40px",
                     borderRadius: "24px",
-                    padding: "60px 80px",
                     textAlign: "center",
-                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-                    position: "relative",
-                    zIndex: 1
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
                 }}>
-                    <div style={{ fontSize: "80px", marginBottom: "20px" }}>😞</div>
-                    <h2 style={{ color: "white", marginBottom: "20px", fontSize: "28px", fontWeight: "800" }}>{error}</h2>
-                    <Link to="/products">
-                        <button style={{
-                            padding: "14px 32px",
-                            background: "linear-gradient(135deg, #FFA500, #FF8C00)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "12px",
-                            fontWeight: "700",
-                            cursor: "pointer",
-                            fontSize: "16px",
-                            boxShadow: "0 8px 24px rgba(255,165,0,0.4)"
-                        }}>
-                            ← Back to Products
-                        </button>
-                    </Link>
+                    <div style={{ fontSize: "64px", marginBottom: "20px" }}>❌</div>
+                    <h2 style={{ fontSize: "24px", color: "#dc3545" }}>Product Not Found</h2>
                 </div>
             </div>
         );
@@ -153,289 +144,38 @@ export default function ProductDetail() {
     return (
         <div style={{
             minHeight: "100vh",
-            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
+            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
+            padding: "60px 20px"
         }}>
-            {/* Breadcrumb - Glassmorphism */}
-            <div style={{
-                background: "rgba(255, 255, 255, 0.7)",
-                backdropFilter: "blur(10px)",
-                WebkitBackdropFilter: "blur(10px)",
-                borderBottom: "1px solid rgba(255,255,255,0.3)",
-                padding: "20px 40px",
-                boxShadow: "0 4px 15px rgba(0,0,0,0.05)"
-            }}>
-                <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-                    <Link to="/products" style={{
-                        color: "#1E90FF",
-                        textDecoration: "none",
+            <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+                {/* Back Button */}
+                <button
+                    onClick={() => navigate("/products")}
+                    style={{
+                        padding: "12px 24px",
+                        background: "rgba(255,255,255,0.9)",
+                        border: "2px solid rgba(30,144,255,0.3)",
+                        borderRadius: "12px",
+                        fontSize: "16px",
                         fontWeight: "700",
-                        fontSize: "15px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "8px",
+                        color: "#1A1A2E",
+                        cursor: "pointer",
+                        marginBottom: "30px",
                         transition: "all 0.3s"
-                    }}>
-                        ← Back to Products
-                    </Link>
-                </div>
-            </div>
+                    }}
+                    onMouseEnter={(e) => {
+                        e.target.style.background = "#1E90FF";
+                        e.target.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.target.style.background = "rgba(255,255,255,0.9)";
+                        e.target.style.color = "#1A1A2E";
+                    }}
+                >
+                    ← Back to Products
+                </button>
 
-            {/* Product Detail */}
-            <div style={{
-                maxWidth: "1200px",
-                margin: "0 auto",
-                padding: "60px 40px"
-            }}>
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "40px",
-                    marginBottom: "40px"
-                }}>
-                    {/* Left: Product Image - Enhanced Glassmorphism */}
-                    <div style={{
-                        background: "rgba(255, 255, 255, 0.8)",
-                        backdropFilter: "blur(20px)",
-                        WebkitBackdropFilter: "blur(20px)",
-                        border: "1px solid rgba(255,255,255,0.3)",
-                        borderRadius: "24px",
-                        padding: "60px",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minHeight: "500px",
-                        position: "relative",
-                        overflow: "hidden"
-                    }}>
-                        {/* Decorative background */}
-                        <div style={{
-                            position: "absolute",
-                            top: "-50%",
-                            left: "-50%",
-                            width: "200%",
-                            height: "200%",
-                            background: "radial-gradient(circle, rgba(30,144,255,0.05), transparent 50%)",
-                            animation: "rotate 20s linear infinite"
-                        }} />
-                        <div style={{ fontSize: "200px", position: "relative", zIndex: 1 }}>📦</div>
-                    </div>
-
-                    {/* Right: Product Info */}
-                    <div>
-                        <h1 style={{
-                            fontSize: "42px",
-                            fontWeight: "800",
-                            color: "#1A1A2E",
-                            marginBottom: "16px",
-                            lineHeight: "1.2"
-                        }}>
-                            {product.name}
-                        </h1>
-
-                        {/* Rating */}
-                        {reviews.length > 0 && (
-                            <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "10px",
-                                marginBottom: "24px"
-                            }}>
-                                <span style={{ fontSize: "24px" }}>{renderStars(Math.round(averageRating))}</span>
-                                <span style={{ color: "#666", fontSize: "16px", fontWeight: "600" }}>
-                                    {averageRating} ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Price */}
-                        <div style={{
-                            fontSize: "52px",
-                            fontWeight: "800",
-                            background: "linear-gradient(135deg, #FFA500, #FF6B6B)",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            marginBottom: "24px",
-                            lineHeight: "1"
-                        }}>
-                            ${product.price}
-                        </div>
-
-                        {/* Description */}
-                        <p style={{
-                            fontSize: "18px",
-                            color: "#666",
-                            lineHeight: "1.8",
-                            marginBottom: "30px"
-                        }}>
-                            {product.description}
-                        </p>
-
-                        {/* Stock & SKU - Glassmorphism */}
-                        <div style={{
-                            display: "flex",
-                            gap: "16px",
-                            marginBottom: "30px",
-                            flexWrap: "wrap"
-                        }}>
-                            <div style={{
-                                padding: "14px 24px",
-                                background: product.stock > 0
-                                    ? "linear-gradient(135deg, rgba(76,175,80,0.15), rgba(76,175,80,0.05))"
-                                    : "linear-gradient(135deg, rgba(220,53,69,0.15), rgba(220,53,69,0.05))",
-                                backdropFilter: "blur(10px)",
-                                borderRadius: "14px",
-                                color: product.stock > 0 ? "#4CAF50" : "#dc3545",
-                                fontWeight: "700",
-                                border: `2px solid ${product.stock > 0 ? "#4CAF50" : "#dc3545"}`,
-                                fontSize: "15px"
-                            }}>
-                                {product.stock > 0 ? `✓ ${product.stock} in stock` : "⚠ Out of Stock"}
-                            </div>
-                            <div style={{
-                                padding: "14px 24px",
-                                background: "linear-gradient(135deg, rgba(30,144,255,0.15), rgba(30,144,255,0.05))",
-                                backdropFilter: "blur(10px)",
-                                borderRadius: "14px",
-                                color: "#1E90FF",
-                                fontWeight: "700",
-                                border: "2px solid #1E90FF",
-                                fontSize: "15px"
-                            }}>
-                                SKU: {product.sku}
-                            </div>
-                        </div>
-
-                        {/* Quantity Selector & Add to Cart - Glassmorphism */}
-                        {token && role === "CUSTOMER" && product.stock > 0 && (
-                            <div style={{
-                                background: "rgba(255, 255, 255, 0.8)",
-                                backdropFilter: "blur(20px)",
-                                WebkitBackdropFilter: "blur(20px)",
-                                border: "1px solid rgba(255,255,255,0.3)",
-                                padding: "30px",
-                                borderRadius: "20px",
-                                boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                                marginBottom: "20px"
-                            }}>
-                                <label style={{
-                                    display: "block",
-                                    marginBottom: "12px",
-                                    fontWeight: "700",
-                                    color: "#1A1A2E",
-                                    fontSize: "16px"
-                                }}>
-                                    Quantity:
-                                </label>
-                                <div style={{ display: "flex", gap: "12px" }}>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max={product.stock}
-                                        value={qty}
-                                        onChange={(e) => setQty(parseInt(e.target.value) || 1)}
-                                        style={{
-                                            width: "100px",
-                                            padding: "16px",
-                                            borderRadius: "12px",
-                                            border: "2px solid rgba(30,144,255,0.3)",
-                                            background: "rgba(255,255,255,0.7)",
-                                            fontSize: "18px",
-                                            fontWeight: "700",
-                                            textAlign: "center",
-                                            color: "#1A1A2E",
-                                            outline: "none"
-                                        }}
-                                    />
-                                    <button
-                                        onClick={handleAddToCart}
-                                        style={{
-                                            flex: 1,
-                                            padding: "16px 30px",
-                                            background: "linear-gradient(135deg, #FFA500, #FF8C00)",
-                                            color: "white",
-                                            border: "none",
-                                            borderRadius: "12px",
-                                            fontSize: "18px",
-                                            fontWeight: "700",
-                                            cursor: "pointer",
-                                            boxShadow: "0 8px 24px rgba(255,165,0,0.4)",
-                                            transition: "all 0.3s"
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.target.style.transform = "translateY(-2px)";
-                                            e.target.style.boxShadow = "0 12px 30px rgba(255,165,0,0.5)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.target.style.transform = "translateY(0)";
-                                            e.target.style.boxShadow = "0 8px 24px rgba(255,165,0,0.4)";
-                                        }}
-                                    >
-                                        🛒 Add to Cart
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {msg && (
-                            <div style={{
-                                padding: "18px 24px",
-                                background: msg.includes("✓")
-                                    ? "linear-gradient(135deg, rgba(76,175,80,0.15), rgba(76,175,80,0.05))"
-                                    : "linear-gradient(135deg, rgba(220,53,69,0.15), rgba(220,53,69,0.05))",
-                                backdropFilter: "blur(10px)",
-                                border: `2px solid ${msg.includes("✓") ? "#4CAF50" : "#dc3545"}`,
-                                borderRadius: "12px",
-                                color: msg.includes("✓") ? "#4CAF50" : "#dc3545",
-                                fontWeight: "700",
-                                marginBottom: "20px",
-                                fontSize: "16px"
-                            }}>
-                                {msg}
-                            </div>
-                        )}
-
-                        {/* Admin/Vendor Actions */}
-                        {(role === "ADMIN" || role === "VENDOR") && (
-                            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                                <Link to={`/products/${id}/edit`} style={{ textDecoration: "none" }}>
-                                    <button style={{
-                                        padding: "14px 28px",
-                                        background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "12px",
-                                        fontWeight: "700",
-                                        cursor: "pointer",
-                                        fontSize: "16px",
-                                        boxShadow: "0 4px 15px rgba(30,144,255,0.3)",
-                                        transition: "all 0.3s"
-                                    }}>
-                                        ✏️ Edit Product
-                                    </button>
-                                </Link>
-                                <button
-                                    onClick={handleDelete}
-                                    style={{
-                                        padding: "14px 28px",
-                                        background: "#dc3545",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "12px",
-                                        fontWeight: "700",
-                                        cursor: "pointer",
-                                        fontSize: "16px",
-                                        transition: "all 0.3s"
-                                    }}
-                                >
-                                    🗑️ Delete Product
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Reviews Section - Glassmorphism */}
+                {/* Product Detail Card */}
                 <div style={{
                     background: "rgba(255, 255, 255, 0.8)",
                     backdropFilter: "blur(20px)",
@@ -443,205 +183,454 @@ export default function ProductDetail() {
                     border: "1px solid rgba(255,255,255,0.3)",
                     borderRadius: "24px",
                     padding: "40px",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+                    marginBottom: "30px"
+                }}>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "40px",
+                        alignItems: "start"
+                    }}>
+                        {/* Product Image */}
+                        <div>
+                            {product.imageUrl ? (
+                                <img
+                                    src={`http://localhost:8081${product.imageUrl}`}
+                                    alt={product.name}
+                                    style={{
+                                        width: "100%",
+                                        maxHeight: "500px",
+                                        objectFit: "cover",
+                                        borderRadius: "20px",
+                                        boxShadow: "0 12px 40px rgba(0,0,0,0.15)"
+                                    }}
+                                />
+                            ) : (
+                                <div style={{
+                                    width: "100%",
+                                    height: "500px",
+                                    background: "linear-gradient(135deg, rgba(30,144,255,0.1), rgba(75,54,139,0.1))",
+                                    borderRadius: "20px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "120px",
+                                    boxShadow: "0 12px 40px rgba(0,0,0,0.15)"
+                                }}>
+                                    📦
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div>
+                            <h1 style={{
+                                fontSize: "36px",
+                                fontWeight: "800",
+                                color: "#1A1A2E",
+                                marginBottom: "16px",
+                                lineHeight: "1.2"
+                            }}>
+                                {product.name}
+                            </h1>
+
+                            <div style={{
+                                fontSize: "42px",
+                                fontWeight: "800",
+                                background: "linear-gradient(135deg, #4CAF50, #45a049)",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                marginBottom: "24px"
+                            }}>
+                                ${product.price?.toFixed(2)}
+                            </div>
+
+                            <div style={{ marginBottom: "24px" }}>
+                                {product.stock > 0 ? (
+                                    <span style={{
+                                        padding: "8px 16px",
+                                        background: "rgba(76,175,80,0.15)",
+                                        color: "#4CAF50",
+                                        borderRadius: "10px",
+                                        fontSize: "14px",
+                                        fontWeight: "700",
+                                        border: "2px solid #4CAF50"
+                                    }}>
+                                        ✓ In Stock ({product.stock} available)
+                                    </span>
+                                ) : (
+                                    <span style={{
+                                        padding: "8px 16px",
+                                        background: "rgba(220,53,69,0.15)",
+                                        color: "#dc3545",
+                                        borderRadius: "10px",
+                                        fontSize: "14px",
+                                        fontWeight: "700",
+                                        border: "2px solid #dc3545"
+                                    }}>
+                                        ✗ Out of Stock
+                                    </span>
+                                )}
+                            </div>
+
+                            <div style={{
+                                padding: "20px",
+                                background: "linear-gradient(135deg, rgba(30,144,255,0.05), rgba(75,54,139,0.05))",
+                                borderRadius: "16px",
+                                marginBottom: "24px",
+                                border: "1px solid rgba(30,144,255,0.1)"
+                            }}>
+                                <h3 style={{
+                                    fontSize: "16px",
+                                    fontWeight: "800",
+                                    color: "#1A1A2E",
+                                    marginBottom: "12px"
+                                }}>
+                                    📝 Description
+                                </h3>
+                                <p style={{
+                                    fontSize: "15px",
+                                    color: "#666",
+                                    lineHeight: "1.6",
+                                    margin: 0
+                                }}>
+                                    {product.description}
+                                </p>
+                            </div>
+
+                            {product.sku && (
+                                <div style={{
+                                    padding: "16px",
+                                    background: "rgba(0,0,0,0.03)",
+                                    borderRadius: "12px",
+                                    marginBottom: "24px"
+                                }}>
+                                    <span style={{
+                                        fontSize: "14px",
+                                        color: "#666",
+                                        fontWeight: "600"
+                                    }}>
+                                        SKU: <strong style={{ color: "#1A1A2E" }}>{product.sku}</strong>
+                                    </span>
+                                </div>
+                            )}
+
+                            {product.stock > 0 && (
+                                <div style={{ marginBottom: "24px" }}>
+                                    <label style={{
+                                        display: "block",
+                                        fontSize: "16px",
+                                        fontWeight: "700",
+                                        color: "#1A1A2E",
+                                        marginBottom: "12px"
+                                    }}>
+                                        🔢 Quantity
+                                    </label>
+                                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                        <button
+                                            onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                            style={{
+                                                width: "48px",
+                                                height: "48px",
+                                                background: "rgba(30,144,255,0.1)",
+                                                border: "2px solid #1E90FF",
+                                                borderRadius: "12px",
+                                                fontSize: "24px",
+                                                fontWeight: "800",
+                                                color: "#1E90FF",
+                                                cursor: "pointer",
+                                                transition: "all 0.3s"
+                                            }}
+                                        >
+                                            -
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={product.stock}
+                                            value={quantity}
+                                            onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1)))}
+                                            style={{
+                                                width: "80px",
+                                                height: "48px",
+                                                textAlign: "center",
+                                                fontSize: "18px",
+                                                fontWeight: "800",
+                                                border: "2px solid rgba(30,144,255,0.3)",
+                                                borderRadius: "12px",
+                                                background: "rgba(255,255,255,0.9)",
+                                                outline: "none"
+                                            }}
+                                        />
+                                        <button
+                                            onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
+                                            style={{
+                                                width: "48px",
+                                                height: "48px",
+                                                background: "rgba(30,144,255,0.1)",
+                                                border: "2px solid #1E90FF",
+                                                borderRadius: "12px",
+                                                fontSize: "24px",
+                                                fontWeight: "800",
+                                                color: "#1E90FF",
+                                                cursor: "pointer",
+                                                transition: "all 0.3s"
+                                            }}
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {product.stock > 0 ? (
+                                <button
+                                    onClick={addToCart}
+                                    style={{
+                                        width: "100%",
+                                        padding: "16px",
+                                        background: "linear-gradient(135deg, #4CAF50, #45a049)",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "12px",
+                                        fontSize: "18px",
+                                        fontWeight: "700",
+                                        cursor: "pointer",
+                                        boxShadow: "0 8px 24px rgba(76,175,80,0.4)",
+                                        transition: "all 0.3s",
+                                        marginBottom: "16px"
+                                    }}
+                                >
+                                    🛒 Add to Cart
+                                </button>
+                            ) : (
+                                <button
+                                    disabled
+                                    style={{
+                                        width: "100%",
+                                        padding: "16px",
+                                        background: "#ccc",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "12px",
+                                        fontSize: "18px",
+                                        fontWeight: "700",
+                                        cursor: "not-allowed",
+                                        marginBottom: "16px"
+                                    }}
+                                >
+                                    ✗ Out of Stock
+                                </button>
+                            )}
+
+                            {(role === "VENDOR" || role === "ADMIN") && (
+                                <button
+                                    onClick={() => navigate(`/products/${id}/edit`)}
+                                    style={{
+                                        width: "100%",
+                                        padding: "14px",
+                                        background: "linear-gradient(135deg, #1E90FF, #4B368B)",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "12px",
+                                        fontSize: "16px",
+                                        fontWeight: "700",
+                                        cursor: "pointer",
+                                        boxShadow: "0 4px 16px rgba(30,144,255,0.3)"
+                                    }}
+                                >
+                                    ✏️ Edit Product
+                                </button>
+                            )}
+
+                            {msg && (
+                                <div style={{
+                                    marginTop: "20px",
+                                    padding: "16px 20px",
+                                    borderRadius: "12px",
+                                    background: msg.includes("✓")
+                                        ? "rgba(76,175,80,0.15)"
+                                        : "rgba(220,53,69,0.15)",
+                                    color: msg.includes("✓") ? "#4CAF50" : "#dc3545",
+                                    fontWeight: "700",
+                                    fontSize: "15px",
+                                    border: `2px solid ${msg.includes("✓") ? "#4CAF50" : "#dc3545"}`,
+                                    textAlign: "center"
+                                }}>
+                                    {msg}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ✅ REVIEWS SECTION */}
+                <div style={{
+                    background: "rgba(255, 255, 255, 0.8)",
+                    borderRadius: "24px",
+                    padding: "40px",
                     boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
                 }}>
                     <h2 style={{
-                        fontSize: "32px",
+                        fontSize: "28px",
                         fontWeight: "800",
                         color: "#1A1A2E",
                         marginBottom: "30px"
                     }}>
-                        ⭐ Customer Reviews
+                        ⭐ Reviews & Ratings
                     </h2>
 
-                    {token && role === "CUSTOMER" && (
-                        <div style={{ marginBottom: "30px" }}>
-                            {!showReviewForm ? (
-                                <button
-                                    onClick={() => setShowReviewForm(true)}
-                                    style={{
-                                        padding: "14px 28px",
-                                        background: "linear-gradient(135deg, #FFA500, #FF8C00)",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "12px",
-                                        fontWeight: "700",
-                                        cursor: "pointer",
-                                        fontSize: "16px",
-                                        boxShadow: "0 4px 15px rgba(255,165,0,0.3)",
-                                        transition: "all 0.3s"
-                                    }}
-                                >
-                                    ✍️ Write a Review
-                                </button>
-                            ) : (
-                                <form onSubmit={handleSubmitReview} style={{
-                                    background: "linear-gradient(135deg, rgba(30,144,255,0.05), rgba(75,54,139,0.05))",
-                                    backdropFilter: "blur(10px)",
-                                    padding: "30px",
-                                    borderRadius: "16px",
-                                    border: "2px solid rgba(30,144,255,0.2)"
+                    {/* Write Review Form (only if logged in) */}
+                    {token && (
+                        <form onSubmit={handleReviewSubmit} style={{
+                            marginBottom: "40px",
+                            padding: "24px",
+                            background: "rgba(30,144,255,0.05)",
+                            borderRadius: "16px"
+                        }}>
+                            <h3 style={{
+                                fontSize: "18px",
+                                fontWeight: "700",
+                                marginBottom: "16px"
+                            }}>
+                                Write a Review
+                            </h3>
+
+                            <div style={{ marginBottom: "16px" }}>
+                                <label style={{
+                                    display: "block",
+                                    fontWeight: "700",
+                                    marginBottom: "8px"
                                 }}>
-                                    <div style={{ marginBottom: "20px" }}>
-                                        <label style={{ fontWeight: "700", marginBottom: "8px", display: "block", color: "#1A1A2E" }}>
-                                            Rating:
-                                        </label>
-                                        <select
-                                            value={newReview.rating}
-                                            onChange={(e) => setNewReview({ ...newReview, rating: parseInt(e.target.value) })}
-                                            style={{
-                                                padding: "14px 18px",
-                                                borderRadius: "12px",
-                                                border: "2px solid rgba(30,144,255,0.3)",
-                                                background: "rgba(255,255,255,0.7)",
-                                                fontSize: "16px",
-                                                fontWeight: "600",
-                                                cursor: "pointer",
-                                                outline: "none"
-                                            }}
-                                        >
-                                            {[5, 4, 3, 2, 1].map(r => (
-                                                <option key={r} value={r}>{renderStars(r)}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    Rating: {getStars(rating)}
+                                </label>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="5"
+                                    value={rating}
+                                    onChange={(e) => setRating(parseInt(e.target.value))}
+                                    style={{
+                                        width: "100%",
+                                        cursor: "pointer",
+                                        accentColor: "#1E90FF"
+                                    }}
+                                />
+                            </div>
 
-                                    <div style={{ marginBottom: "20px" }}>
-                                        <label style={{ fontWeight: "700", marginBottom: "8px", display: "block", color: "#1A1A2E" }}>
-                                            Comment:
-                                        </label>
-                                        <textarea
-                                            value={newReview.comment}
-                                            onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                                            rows="4"
-                                            placeholder="Share your experience with this product..."
-                                            style={{
-                                                width: "100%",
-                                                padding: "14px 18px",
-                                                borderRadius: "12px",
-                                                border: "2px solid rgba(30,144,255,0.3)",
-                                                background: "rgba(255,255,255,0.7)",
-                                                fontSize: "16px",
-                                                resize: "vertical",
-                                                fontFamily: "inherit",
-                                                outline: "none"
-                                            }}
-                                        />
-                                    </div>
+                            <div style={{ marginBottom: "16px" }}>
+                                <label style={{
+                                    display: "block",
+                                    fontWeight: "700",
+                                    marginBottom: "8px"
+                                }}>
+                                    Comment:
+                                </label>
+                                <textarea
+                                    value={comment}
+                                    onChange={(e) => setComment(e.target.value)}
+                                    rows="4"
+                                    placeholder="Share your experience with this product..."
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px",
+                                        borderRadius: "8px",
+                                        border: "2px solid rgba(30,144,255,0.3)",
+                                        fontSize: "15px",
+                                        fontFamily: "inherit",
+                                        resize: "vertical"
+                                    }}
+                                />
+                            </div>
 
-                                    <div style={{ display: "flex", gap: "12px" }}>
-                                        <button type="submit" style={{
-                                            padding: "14px 28px",
-                                            background: "linear-gradient(135deg, #4CAF50, #45a049)",
-                                            color: "white",
-                                            border: "none",
-                                            borderRadius: "12px",
-                                            fontWeight: "700",
-                                            cursor: "pointer",
-                                            fontSize: "16px",
-                                            boxShadow: "0 4px 15px rgba(76,175,80,0.3)"
-                                        }}>
-                                            Submit Review
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowReviewForm(false)}
-                                            style={{
-                                                padding: "14px 28px",
-                                                background: "#6c757d",
-                                                color: "white",
-                                                border: "none",
-                                                borderRadius: "12px",
-                                                fontWeight: "700",
-                                                cursor: "pointer",
-                                                fontSize: "16px"
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </form>
-                            )}
+                            <button
+                                type="submit"
+                                disabled={submittingReview}
+                                style={{
+                                    padding: "12px 24px",
+                                    background: submittingReview ? "#ccc" : "#1E90FF",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    fontWeight: "700",
+                                    cursor: submittingReview ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                {submittingReview ? "Submitting..." : "Submit Review"}
+                            </button>
 
                             {reviewMsg && (
                                 <div style={{
                                     marginTop: "16px",
-                                    padding: "14px 18px",
-                                    background: reviewMsg.includes("✓")
-                                        ? "rgba(76,175,80,0.15)"
-                                        : "rgba(220,53,69,0.15)",
-                                    color: reviewMsg.includes("✓") ? "#4CAF50" : "#dc3545",
-                                    borderRadius: "12px",
-                                    fontWeight: "700",
-                                    border: `2px solid ${reviewMsg.includes("✓") ? "#4CAF50" : "#dc3545"}`
+                                    padding: "12px",
+                                    background: reviewMsg.includes("✓") ? "#d4edda" : "#f8d7da",
+                                    color: reviewMsg.includes("✓") ? "#155724" : "#721c24",
+                                    borderRadius: "8px",
+                                    fontWeight: "700"
                                 }}>
                                     {reviewMsg}
                                 </div>
                             )}
-                        </div>
+                        </form>
                     )}
 
                     {/* Reviews List */}
-                    {reviews.length === 0 ? (
-                        <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                            <div style={{ fontSize: "80px", marginBottom: "20px", opacity: 0.3 }}>⭐</div>
-                            <p style={{ fontSize: "18px", color: "#999", fontWeight: "600" }}>
-                                No reviews yet. Be the first to review!
-                            </p>
-                        </div>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                            {reviews.map(review => (
-                                <div key={review.id} style={{
-                                    padding: "24px",
-                                    background: "linear-gradient(135deg, rgba(30,144,255,0.03), rgba(75,54,139,0.03))",
-                                    backdropFilter: "blur(10px)",
-                                    borderRadius: "16px",
-                                    border: "1px solid rgba(30,144,255,0.1)",
-                                    transition: "all 0.3s"
-                                }}>
+                    <div style={{ display: "grid", gap: "20px" }}>
+                        {reviews.length > 0 ? (
+                            reviews.map(review => (
+                                <div
+                                    key={review.id}
+                                    style={{
+                                        padding: "20px",
+                                        background: "white",
+                                        borderRadius: "12px",
+                                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                                        border: "1px solid rgba(0,0,0,0.05)"
+                                    }}
+                                >
                                     <div style={{
                                         display: "flex",
                                         justifyContent: "space-between",
-                                        alignItems: "center",
                                         marginBottom: "12px"
                                     }}>
-                                        <span style={{ fontSize: "22px" }}>{renderStars(review.rating)}</span>
-                                        <span style={{ color: "#999", fontSize: "14px", fontWeight: "600" }}>
-                                            {new Date(review.createdAt).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <p style={{ color: "#1A1A2E", lineHeight: "1.7", fontSize: "16px" }}>
-                                        {review.comment || <em style={{ color: "#999" }}>No comment provided</em>}
-                                    </p>
-                                    {review.adminNote && (
-                                        <div style={{
-                                            marginTop: "16px",
-                                            padding: "14px 18px",
-                                            background: "rgba(30,144,255,0.1)",
-                                            borderLeft: "4px solid #1E90FF",
-                                            borderRadius: "8px"
-                                        }}>
-                                            <strong style={{ color: "#1E90FF", fontSize: "14px" }}>Admin Note:</strong>
-                                            <span style={{ color: "#666", marginLeft: "8px" }}>{review.adminNote}</span>
+                                        <div>
+                                            <div style={{ fontSize: "18px", marginBottom: "4px" }}>
+                                                {getStars(review.rating)}
+                                            </div>
+                                            <div style={{ fontWeight: "700", color: "#1A1A2E" }}>
+                                                {review.userName || "Anonymous"}
+                                            </div>
                                         </div>
-                                    )}
+                                        <div style={{ fontSize: "14px", color: "#999" }}>
+                                            {review.createdAt}
+                                        </div>
+                                    </div>
+                                    <p style={{
+                                        fontSize: "15px",
+                                        color: "#666",
+                                        lineHeight: "1.6",
+                                        margin: 0
+                                    }}>
+                                        {review.comment}
+                                    </p>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        ) : (
+                            <div style={{
+                                textAlign: "center",
+                                padding: "60px 20px",
+                                color: "#999"
+                            }}>
+                                <div style={{ fontSize: "64px", marginBottom: "16px" }}>💬</div>
+                                <p style={{ fontSize: "18px", fontWeight: "600" }}>
+                                    No reviews yet. Be the first to review!
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-
-            {/* CSS Animation */}
-            <style>
-                {`
-                    @keyframes rotate {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
-                `}
-            </style>
         </div>
     );
 }

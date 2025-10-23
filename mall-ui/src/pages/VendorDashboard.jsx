@@ -13,35 +13,74 @@ export default function VendorDashboard() {
     });
     const [lowStockProducts, setLowStockProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
     useEffect(() => {
         fetchDashboardData();
     }, []);
 
     async function fetchDashboardData() {
+        setLoading(true);
+        setError("");
+
         try {
+            // ✅ Fetch all data with proper error handling
+            console.log("Fetching dashboard data...");
+
             const [productsRes, ordersRes, discountsRes] = await Promise.all([
-                API.get("/products"),
-                API.get("/orders?status=all"),
-                API.get("/discounts")
+                API.get("/products").catch(err => {
+                    console.error("Products API error:", err);
+                    return { data: [] };
+                }),
+                API.get("/orders").catch(err => {  // ✅ Changed from /orders?status=all
+                    console.error("Orders API error:", err);
+                    return { data: [] };
+                }),
+                API.get("/discounts").catch(err => {
+                    console.error("Discounts API error:", err);
+                    return { data: [] };
+                })
             ]);
 
-            const products = productsRes.data;
-            const orders = ordersRes.data;
-            const discounts = discountsRes.data;
-            const lowStock = products.filter(p => p.stock < 10);
+            console.log("Products:", productsRes.data);
+            console.log("Orders:", ordersRes.data);
+            console.log("Discounts:", discountsRes.data);
+
+            const products = Array.isArray(productsRes.data) ? productsRes.data : [];
+            const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+            const discounts = Array.isArray(discountsRes.data) ? discountsRes.data : [];
+
+            // ✅ Filter low stock products (stock < 10)
+            const lowStock = products.filter(p => p.stock != null && p.stock < 10);
+
+            // ✅ Calculate total revenue safely
+            const totalRevenue = orders.reduce((sum, o) => {
+                const orderTotal = parseFloat(o.total) || 0;
+                return sum + orderTotal;
+            }, 0);
+
+            // ✅ Count pending orders safely
+            const pendingCount = orders.filter(o =>
+                o.status && o.status.toUpperCase() === "PENDING"
+            ).length;
+
+            // ✅ Count active discounts safely
+            const activeDiscountCount = discounts.filter(d => d.active === true).length;
 
             setStats({
                 totalProducts: products.length,
                 lowStockProducts: lowStock.length,
                 totalOrders: orders.length,
-                pendingOrders: orders.filter(o => o.status === "PENDING").length,
-                totalRevenue: orders.reduce((sum, o) => sum + o.total, 0),
-                activeDiscounts: discounts.filter(d => d.active).length
+                pendingOrders: pendingCount,
+                totalRevenue: totalRevenue,
+                activeDiscounts: activeDiscountCount
             });
+
             setLowStockProducts(lowStock);
+
         } catch (err) {
-            console.error("Failed to load dashboard data", err);
+            console.error("Failed to load dashboard data:", err);
+            setError("Failed to load dashboard data. Please try refreshing the page.");
         } finally {
             setLoading(false);
         }
@@ -102,6 +141,37 @@ export default function VendorDashboard() {
                         Manage your store and inventory
                     </p>
                 </div>
+
+                {/* ✅ Error Message */}
+                {error && (
+                    <div style={{
+                        padding: "20px",
+                        marginBottom: "30px",
+                        background: "#f8d7da",
+                        color: "#721c24",
+                        borderRadius: "12px",
+                        textAlign: "center",
+                        fontWeight: "700",
+                        border: "2px solid #f5c6cb"
+                    }}>
+                        ⚠️ {error}
+                        <button
+                            onClick={fetchDashboardData}
+                            style={{
+                                marginLeft: "16px",
+                                padding: "8px 16px",
+                                background: "#721c24",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                fontWeight: "700"
+                            }}
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
 
                 {/* Stats Grid */}
                 <div style={{
