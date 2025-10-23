@@ -8,4 +8,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     boolean existsByReference(String reference);
     List<Payment> findByUserEmailOrderByCreatedAtDesc(String userEmail);
     List<Payment> findByStatusOrderByCreatedAtDesc(PaymentStatus status);
+
+    // ✅ ADD THIS METHOD for the history endpoint
+    List<Payment> findByUserEmail(String userEmail);
 }

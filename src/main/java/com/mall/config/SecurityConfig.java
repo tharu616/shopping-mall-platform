@@ -31,15 +31,37 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ REVIEWS - FIXED WITH /api/ PREFIX
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/product/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/my-reviews").authenticated()
+                        .requestMatchers("/api/reviews/admin/**").hasRole("ADMIN")
+
+                        // ✅ OPTIONS (CORS preflight)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // ✅ PUBLIC: Products
                         .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
+
+                        // ✅ PUBLIC: Auth
                         .requestMatchers("/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
-                        // NEW: Allow public access to uploaded files
+
+                        // ✅ PUBLIC: Uploaded files
                         .requestMatchers("/profile-pictures/**", "/receipts/**", "/uploads/**").permitAll()
+
+                        // ✅ AUTHENTICATED: Cart
+                        .requestMatchers("/cart/**").authenticated()
+
+                        // ✅ AUTHENTICATED: Payments
+                        .requestMatchers("/payments/**").authenticated()
+
+                        // ✅ ALL OTHER REQUESTS - MUST BE LAST
                         .anyRequest().authenticated()
                 );
 
+        // Add JWT filter before Spring Security's username/password filter
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 

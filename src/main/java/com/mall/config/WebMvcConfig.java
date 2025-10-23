@@ -17,6 +17,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/profile-pictures/**")
                 .addResourceLocations("file:" + uploadDir + "/profile-pictures/");
 
+        // ✨ NEW: Serve product images from /uploads/** URLs
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + uploadDir + "/");
+
         // You can add more mappings for other file types
         registry.addResourceHandler("/receipts/**")
                 .addResourceLocations("file:" + uploadDir + "/receipts/");

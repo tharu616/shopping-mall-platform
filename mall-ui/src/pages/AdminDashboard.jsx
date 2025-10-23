@@ -13,6 +13,7 @@ export default function AdminDashboard() {
         activeDiscounts: 0
     });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchDashboardData();
@@ -20,19 +21,30 @@ export default function AdminDashboard() {
 
     async function fetchDashboardData() {
         try {
-            const [productsRes, ordersRes, paymentsRes, reviewsRes, discountsRes] = await Promise.all([
+            const results = await Promise.allSettled([
                 API.get("/products"),
-                API.get("/orders?status=all"),
+                API.get("/orders/all"),
                 API.get("/payments/pending"),
                 API.get("/reviews/pending"),
-                API.get("/discounts")
+                API.get("/discounts").catch(() => ({ data: [] }))
             ]);
 
-            const products = productsRes.data;
-            const orders = ordersRes.data;
-            const payments = paymentsRes.data;
-            const reviews = reviewsRes.data;
-            const discounts = discountsRes.data;
+            const products = results[0].status === "fulfilled" ? results[0].value.data : [];
+            const orders = results[1].status === "fulfilled" ? results[1].value.data : [];
+            const payments = results[2].status === "fulfilled" ? results[2].value.data : [];
+            const reviews = results[3].status === "fulfilled" ? results[3].value.data : [];
+            const discounts = results[4].status === "fulfilled" ? results[4].value.data : [];
+
+            console.log("Dashboard Data:", { products, orders, payments, reviews, discounts });
+
+            const totalRevenue = orders.reduce((sum, order) => {
+                const orderTotal = order.total || order.totalAmount || 0;
+                return sum + orderTotal;
+            }, 0);
+
+            const activeDiscountsCount = Array.isArray(discounts)
+                ? discounts.filter(d => d.active === true || d.active === "true").length
+                : 0;
 
             setStats({
                 totalUsers: 0,
@@ -40,11 +52,13 @@ export default function AdminDashboard() {
                 totalOrders: orders.length,
                 pendingPayments: payments.length,
                 pendingReviews: reviews.length,
-                totalRevenue: orders.reduce((sum, o) => sum + o.total, 0),
-                activeDiscounts: discounts.filter(d => d.active).length
+                totalRevenue: totalRevenue,
+                activeDiscounts: activeDiscountsCount
             });
+
         } catch (err) {
             console.error("Failed to load dashboard data", err);
+            setError("Failed to load dashboard statistics");
         } finally {
             setLoading(false);
         }
@@ -66,6 +80,46 @@ export default function AdminDashboard() {
         );
     }
 
+    if (error) {
+        return (
+            <div style={{
+                minHeight: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
+            }}>
+                <div style={{
+                    color: "#dc3545",
+                    fontSize: "20px",
+                    fontWeight: "700",
+                    textAlign: "center",
+                    padding: "40px"
+                }}>
+                    <div style={{ fontSize: "48px", marginBottom: "20px" }}>⚠️</div>
+                    {error}
+                    <br />
+                    <button
+                        onClick={() => window.location.reload()}
+                        style={{
+                            marginTop: "20px",
+                            padding: "12px 32px",
+                            background: "#1E90FF",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            fontSize: "16px",
+                            fontWeight: "700"
+                        }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     const statCards = [
         { label: "Total Products", value: stats.totalProducts, icon: "📦", color: "linear-gradient(135deg, #1E90FF, #4B368B)" },
         { label: "Total Orders", value: stats.totalOrders, icon: "🛒", color: "linear-gradient(135deg, #4CAF50, #45a049)" },
@@ -79,10 +133,12 @@ export default function AdminDashboard() {
         { label: "Manage Products", icon: "📦", link: "/products", color: "#1E90FF" },
         { label: "View Orders", icon: "🛒", link: "/orders", color: "#4CAF50" },
         { label: "Payments", icon: "💳", link: "/payments", color: "#FFA500" },
+        { label: "Payment History", icon: "📊", link: "/payment-history", color: "#17a2b8" }, // ⭐ NEW
         { label: "Categories", icon: "🗂️", link: "/categories", color: "#9C27B0" },
         { label: "Discounts", icon: "🏷️", link: "/discounts", color: "#dc3545" },
         { label: "Reviews", icon: "⭐", link: "/reviews", color: "#FF6B6B" }
     ];
+
 
     return (
         <div style={{

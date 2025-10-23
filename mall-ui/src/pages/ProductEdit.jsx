@@ -16,41 +16,116 @@ export default function ProductEdit() {
         stock: "",
         sku: "",
         categoryId: "",
-        active: true
+        active: true,
+        imageUrl: ""
     });
     const [msg, setMsg] = useState("");
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+    // ✨ Image upload states
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
-        // Fetch existing product if editing
         if (isEdit) {
-            API.get(`/products/${id}`).then(res => setFields(res.data));
+            API.get(`/products/${id}`)
+                .then(res => {
+                    setFields(res.data);
+                    if (res.data.imageUrl) {
+                        setImagePreview(`http://localhost:8081${res.data.imageUrl}`);
+                    }
+                });
         }
     }, [id, isEdit]);
+
+    function handleFileChange(e) {
+        const file = e.target.files[0];
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                setMsg("❌ Please select an image file");
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                setMsg("❌ Image size must be less than 5MB");
+                return;
+            }
+
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+            setMsg("");
+        }
+    }
+
+    async function uploadImage(productId) {
+        if (!selectedFile) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('image', selectedFile);
+
+        try {
+            const response = await API.post(`/products/${productId}/upload-image`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            setFields(prev => ({ ...prev, imageUrl: response.data.imageUrl }));
+            setImagePreview(`http://localhost:8081${response.data.imageUrl}`);
+            setMsg("✓ Image uploaded successfully!");
+            setSelectedFile(null);
+
+        } catch (error) {
+            setMsg("❌ Failed to upload image");
+            console.error("Upload error:", error);
+        } finally {
+            setUploading(false);
+        }
+    }
 
     async function handleSubmit(e) {
         e.preventDefault();
         try {
+            let savedProduct;
             if (isEdit) {
                 await API.put(`/products/${id}`, fields);
+                savedProduct = { id };
+
+                if (selectedFile) {
+                    await uploadImage(id);
+                }
+
                 setMsg("✓ Product updated successfully!");
-                setTimeout(() => navigate("/products"), 1500);
             } else {
-                await API.post("/products", fields);
+                const response = await API.post("/products", fields);
+                savedProduct = response.data;
+
+                if (selectedFile && savedProduct.id) {
+                    await uploadImage(savedProduct.id);
+                }
+
                 setMsg("✓ Product created successfully!");
-                setTimeout(() => navigate("/products"), 1500);
             }
+
+            setTimeout(() => navigate("/products"), 2000);
+
         } catch (err) {
             setMsg("❌ Failed to save product");
+            console.error(err);
         }
     }
 
+    // ✅ UPDATED: Simple browser confirmation
     async function handleDelete() {
-        if (deleteConfirmText !== "DELETE") {
-            setMsg("Please type DELETE to confirm");
-            return;
-        }
+        const confirmed = window.confirm(
+            `Are you sure you want to delete this product?\n\nThis action is permanent and cannot be undone.`
+        );
+
+        if (!confirmed) return;
 
         try {
             await API.delete(`/products/${id}`);
@@ -120,7 +195,7 @@ export default function ProductEdit() {
                     </p>
                 </div>
 
-                {/* Form Card - Glassmorphism */}
+                {/* Form Card */}
                 <div style={{
                     background: "rgba(255, 255, 255, 0.8)",
                     backdropFilter: "blur(20px)",
@@ -132,6 +207,64 @@ export default function ProductEdit() {
                     marginBottom: "24px"
                 }}>
                     <form onSubmit={handleSubmit}>
+                        {/* Product Image Upload Section */}
+                        <div style={{ marginBottom: "24px" }}>
+                            <label style={{
+                                display: "block",
+                                fontWeight: "700",
+                                color: "#1A1A2E",
+                                marginBottom: "10px",
+                                fontSize: "15px"
+                            }}>
+                                📸 Product Image
+                            </label>
+
+                            {imagePreview && (
+                                <div style={{
+                                    marginBottom: "16px",
+                                    display: "flex",
+                                    justifyContent: "center"
+                                }}>
+                                    <img
+                                        src={imagePreview}
+                                        alt="Product preview"
+                                        style={{
+                                            maxWidth: "300px",
+                                            maxHeight: "300px",
+                                            borderRadius: "16px",
+                                            objectFit: "cover",
+                                            boxShadow: "0 8px 24px rgba(0,0,0,0.15)"
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                style={{
+                                    width: "100%",
+                                    padding: "14px 18px",
+                                    borderRadius: "12px",
+                                    border: "2px solid rgba(30,144,255,0.3)",
+                                    background: "rgba(255,255,255,0.9)",
+                                    fontSize: "16px",
+                                    fontWeight: "600",
+                                    color: "#1A1A2E",
+                                    outline: "none",
+                                    cursor: "pointer"
+                                }}
+                            />
+                            <p style={{
+                                fontSize: "13px",
+                                color: "#666",
+                                marginTop: "8px"
+                            }}>
+                                Supported formats: JPG, PNG, GIF (Max 5MB)
+                            </p>
+                        </div>
+
                         {/* Product Name */}
                         <div style={{ marginBottom: "24px" }}>
                             <label style={{
@@ -203,14 +336,13 @@ export default function ProductEdit() {
                             />
                         </div>
 
-                        {/* Price and Stock - Grid */}
+                        {/* Price and Stock */}
                         <div style={{
                             display: "grid",
                             gridTemplateColumns: "1fr 1fr",
                             gap: "20px",
                             marginBottom: "24px"
                         }}>
-                            {/* Price */}
                             <div>
                                 <label style={{
                                     display: "block",
@@ -246,7 +378,6 @@ export default function ProductEdit() {
                                 />
                             </div>
 
-                            {/* Stock */}
                             <div>
                                 <label style={{
                                     display: "block",
@@ -283,14 +414,13 @@ export default function ProductEdit() {
                             </div>
                         </div>
 
-                        {/* SKU and Category ID - Grid */}
+                        {/* SKU and Category ID */}
                         <div style={{
                             display: "grid",
                             gridTemplateColumns: "1fr 1fr",
                             gap: "20px",
                             marginBottom: "24px"
                         }}>
-                            {/* SKU */}
                             <div>
                                 <label style={{
                                     display: "block",
@@ -323,7 +453,6 @@ export default function ProductEdit() {
                                 />
                             </div>
 
-                            {/* Category ID */}
                             <div>
                                 <label style={{
                                     display: "block",
@@ -398,21 +527,28 @@ export default function ProductEdit() {
                         {/* Submit Button */}
                         <button
                             type="submit"
+                            disabled={uploading}
                             style={{
                                 width: "100%",
                                 padding: "16px",
-                                background: "linear-gradient(135deg, #4CAF50, #45a049)",
+                                background: uploading
+                                    ? "#ccc"
+                                    : "linear-gradient(135deg, #4CAF50, #45a049)",
                                 color: "white",
                                 border: "none",
                                 borderRadius: "12px",
                                 fontSize: "18px",
                                 fontWeight: "700",
-                                cursor: "pointer",
-                                boxShadow: "0 8px 24px rgba(76,175,80,0.4)",
+                                cursor: uploading ? "not-allowed" : "pointer",
+                                boxShadow: uploading
+                                    ? "none"
+                                    : "0 8px 24px rgba(76,175,80,0.4)",
                                 transition: "all 0.3s"
                             }}
                         >
-                            {isEdit ? "✓ Update Product" : "✨ Create Product"}
+                            {uploading
+                                ? "⏳ Uploading..."
+                                : isEdit ? "✓ Update Product" : "✨ Create Product"}
                         </button>
 
                         {/* Message */}
@@ -436,7 +572,7 @@ export default function ProductEdit() {
                     </form>
                 </div>
 
-                {/* Delete Button (Only for Edit mode) */}
+                {/* Delete Button */}
                 {isEdit && (
                     <div style={{
                         background: "rgba(255, 255, 255, 0.8)",
@@ -463,7 +599,7 @@ export default function ProductEdit() {
                             Once you delete this product, there is no going back. This action cannot be undone.
                         </p>
                         <button
-                            onClick={() => setShowDeleteModal(true)}
+                            onClick={handleDelete}
                             style={{
                                 padding: "14px 24px",
                                 background: "linear-gradient(135deg, #dc3545, #c82333)",
@@ -478,144 +614,6 @@ export default function ProductEdit() {
                         >
                             🗑️ Delete Product
                         </button>
-                    </div>
-                )}
-
-                {/* Delete Confirmation Modal */}
-                {showDeleteModal && (
-                    <div style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: "rgba(0,0,0,0.7)",
-                        backdropFilter: "blur(8px)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 1000,
-                        padding: "20px"
-                    }}>
-                        <div style={{
-                            background: "rgba(255, 255, 255, 0.95)",
-                            backdropFilter: "blur(20px)",
-                            borderRadius: "24px",
-                            padding: "40px",
-                            maxWidth: "500px",
-                            width: "100%",
-                            boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-                            border: "2px solid rgba(220,53,69,0.3)"
-                        }}>
-                            <div style={{
-                                fontSize: "64px",
-                                textAlign: "center",
-                                marginBottom: "20px"
-                            }}>
-                                ⚠️
-                            </div>
-
-                            <h2 style={{
-                                fontSize: "28px",
-                                fontWeight: "800",
-                                color: "#dc3545",
-                                textAlign: "center",
-                                marginBottom: "16px"
-                            }}>
-                                Delete Product?
-                            </h2>
-
-                            <p style={{
-                                color: "#666",
-                                fontSize: "15px",
-                                lineHeight: "1.6",
-                                marginBottom: "24px",
-                                textAlign: "center"
-                            }}>
-                                This action is <strong>permanent</strong> and cannot be undone. The product will be removed from your catalog.
-                            </p>
-
-                            <div style={{
-                                padding: "16px",
-                                background: "rgba(220,53,69,0.1)",
-                                borderRadius: "12px",
-                                marginBottom: "24px",
-                                border: "1px solid rgba(220,53,69,0.2)"
-                            }}>
-                                <p style={{
-                                    fontSize: "14px",
-                                    color: "#666",
-                                    marginBottom: "12px",
-                                    fontWeight: "600"
-                                }}>
-                                    Type <strong style={{ color: "#dc3545" }}>DELETE</strong> to confirm:
-                                </p>
-                                <input
-                                    type="text"
-                                    value={deleteConfirmText}
-                                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                                    placeholder="Type DELETE here"
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px 16px",
-                                        borderRadius: "10px",
-                                        border: "2px solid rgba(220,53,69,0.3)",
-                                        background: "rgba(255,255,255,0.9)",
-                                        fontSize: "15px",
-                                        fontWeight: "700",
-                                        outline: "none",
-                                        textTransform: "uppercase"
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{
-                                display: "flex",
-                                gap: "12px"
-                            }}>
-                                <button
-                                    onClick={() => {
-                                        setShowDeleteModal(false);
-                                        setDeleteConfirmText("");
-                                    }}
-                                    style={{
-                                        flex: 1,
-                                        padding: "14px",
-                                        background: "#6c757d",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "12px",
-                                        fontSize: "16px",
-                                        fontWeight: "700",
-                                        cursor: "pointer"
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleDelete}
-                                    disabled={deleteConfirmText !== "DELETE"}
-                                    style={{
-                                        flex: 1,
-                                        padding: "14px",
-                                        background: deleteConfirmText === "DELETE"
-                                            ? "linear-gradient(135deg, #dc3545, #c82333)"
-                                            : "#ccc",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "12px",
-                                        fontSize: "16px",
-                                        fontWeight: "700",
-                                        cursor: deleteConfirmText === "DELETE" ? "pointer" : "not-allowed",
-                                        boxShadow: deleteConfirmText === "DELETE"
-                                            ? "0 4px 15px rgba(220,53,69,0.4)"
-                                            : "none"
-                                    }}
-                                >
-                                    🗑️ Delete Forever
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 )}
             </div>

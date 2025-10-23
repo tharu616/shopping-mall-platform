@@ -2,15 +2,19 @@ package com.mall.product;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-record ProductDto(Long id, String sku, String name, String description, Double price, Integer stock, Boolean active) {}
+// ✨ Updated DTO with imageUrl
+record ProductDto(Long id, String sku, String name, String description, Double price, Integer stock, Boolean active, String imageUrl) {}
 
 @RestController
 @RequestMapping("/products")
 public class ProductController {
+
     private final ProductService service;
+
     public ProductController(ProductService s) { this.service = s; }
 
     @GetMapping
@@ -34,6 +38,19 @@ public class ProductController {
         return toDto(service.update(id, fromDto(dto)));
     }
 
+    // ✨ NEW: Upload product image endpoint
+    @PostMapping("/{id}/upload-image")
+    public ResponseEntity<ProductDto> uploadImage(
+            @PathVariable Long id,
+            @RequestParam("image") MultipartFile file) {
+        try {
+            Product updated = service.uploadProductImage(id, file);
+            return ResponseEntity.ok(toDto(updated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
@@ -41,8 +58,18 @@ public class ProductController {
     }
 
     private static ProductDto toDto(Product p) {
-        return new ProductDto(p.getId(), p.getSku(), p.getName(), p.getDescription(), p.getPrice(), p.getStock(), p.getActive());
+        return new ProductDto(
+                p.getId(),
+                p.getSku(),
+                p.getName(),
+                p.getDescription(),
+                p.getPrice(),
+                p.getStock(),
+                p.getActive(),
+                p.getImageUrl()  // ✨ NEW: Include imageUrl
+        );
     }
+
     private static Product fromDto(ProductDto d) {
         return Product.builder()
                 .id(d.id())
@@ -52,11 +79,12 @@ public class ProductController {
                 .price(d.price())
                 .stock(d.stock())
                 .active(d.active() == null ? true : d.active())
+                .imageUrl(d.imageUrl())  // ✨ NEW: Include imageUrl
                 .build();
     }
 
     @ExceptionHandler({IllegalArgumentException.class})
-    public ResponseEntity<?> badRequest(IllegalArgumentException ex) {
+    public ResponseEntity<java.util.Map<String, String>> badRequest(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(java.util.Map.of("message", ex.getMessage()));
     }
 }

@@ -1,5 +1,12 @@
 package com.mall.payment.dto;
 
-import java.util.List;
+import com.mall.payment.PaymentStatus;
 
-public record PaymentListDto(List<PaymentDto> items) {}
+public record PaymentListDto(
+        Long id,
+        Long orderId,
+        PaymentStatus status,
+        String paymentMethod,
+        String reference,
+        Double amount
+) {}

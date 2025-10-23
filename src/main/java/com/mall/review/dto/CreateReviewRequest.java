@@ -1,7 +1,10 @@
 package com.mall.review.dto;
 
-public record CreateReviewRequest(
-        Long productId,
-        Integer rating,
-        String comment
-) {}
+import lombok.Data;
+
+@Data
+public class CreateReviewRequest {
+    private Long productId;
+    private Integer rating;
+    private String comment;
+}
