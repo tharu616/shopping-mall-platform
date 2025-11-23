@@ -25,6 +25,7 @@ import Categories from "./pages/Categories";
 import AdminReviews from "./pages/AdminReviews";
 import NotFound from "./pages/NotFound";
 
+
 export default function App() {
     return (
         <AppLayout>
