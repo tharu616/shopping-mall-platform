@@ -12,15 +12,13 @@ export default function ProductDetail() {
     const [quantity, setQuantity] = useState(1);
     const [msg, setMsg] = useState("");
 
-    // ✅ Review states
+    // ===== ✅ Review states =====
     const [reviews, setReviews] = useState([]);
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
     const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewMsg, setReviewMsg] = useState("");
-    // near other useState hooks for review form
     const [reviewErrors, setReviewErrors] = useState({ rating: "", comment: "" });
-
 
     useEffect(() => {
         loadProduct();
@@ -63,24 +61,62 @@ export default function ProductDetail() {
         }
     }
 
-    // ✅ Submit Review Function
+    // ===== ✅ VALIDATION FUNCTION =====
+    /**
+     * Validates review form inputs
+     * @param {number} rating - Rating value (1-5)
+     * @param {string} comment - Review comment text
+     * @returns {object} Object with error messages for each field
+     */
+    function validateReviewForm(rating, comment) {
+        const errors = { rating: "", comment: "" };
+        const r = Number(rating);
+
+        // ✅ Rating validation: Must be integer between 1-5
+        if (!Number.isInteger(r) || r < 1 || r > 5) {
+            errors.rating = "Please select a rating from 1 to 5.";
+        }
+
+        // ✅ Comment validation
+        const text = (comment ?? "").trim();
+
+        // Required: Comment must not be empty
+        if (!text) {
+            errors.comment = "Comment is required.";
+        }
+        // Minimum length: At least 10 characters
+        else if (text.length < 10) {
+            errors.comment = "Comment must be at least 10 characters.";
+        }
+        // Maximum length: No more than 1000 characters
+        else if (text.length > 1000) {
+            errors.comment = "Comment must be at most 1000 characters.";
+        }
+
+        return errors;
+    }
+
+    // ===== ✅ Submit Review Function with Validation =====
     async function handleReviewSubmit(e) {
         e.preventDefault();
 
-        // assume you already have rating and comment variables in state
+        // ✅ Step 1: Run validation
         const errors = validateReviewForm(rating, comment);
         setReviewErrors(errors);
 
+        // ✅ Step 2: Check if there are any validation errors
         const hasErrors = Object.values(errors).some(Boolean);
         if (hasErrors) {
-            return; // stop here, do not call API
+            return; // Stop submission if validation fails
         }
 
+        // ✅ Step 3: Check if user is logged in
         if (!token) {
-            setReviewMsg("Please login to submit a review");
+            setReviewMsg("❌ Please login to submit a review");
             return;
         }
 
+        // ✅ Step 4: Submit review to API
         setSubmittingReview(true);
         setReviewMsg("");
 
@@ -93,6 +129,7 @@ export default function ProductDetail() {
             setReviewMsg("✓ Review submitted! It will appear after admin approval.");
             setRating(5);
             setComment("");
+            setReviewErrors({ rating: "", comment: "" }); // Clear errors
             setTimeout(() => {
                 setReviewMsg("");
                 loadReviews();
@@ -104,24 +141,6 @@ export default function ProductDetail() {
             setSubmittingReview(false);
         }
     }
-    function validateReviewForm(rating, comment) {
-        const errors = { rating: "", comment: "" };
-        const r = Number(rating);
-
-        if (!Number.isInteger(r) || r < 1 || r > 5) {
-            errors.rating = "Please select a rating from 1 to 5.";
-        }
-        const text = (comment ?? "").trim();
-        if (!text) {
-            errors.comment = "Comment is required.";
-        } else if (text.length < 10) {
-            errors.comment = "Comment must be at least 10 characters.";
-        } else if (text.length > 1000) {
-            errors.comment = "Comment must be at most 1000 characters.";
-        }
-        return errors;
-    }
-
 
     const getStars = (r) => {
         return "⭐".repeat(r) + "☆".repeat(5 - r);
@@ -495,7 +514,7 @@ export default function ProductDetail() {
                     </div>
                 </div>
 
-                {/* ✅ REVIEWS SECTION */}
+                {/* ===== ✅ REVIEWS SECTION ===== */}
                 <div style={{
                     background: "rgba(255, 255, 255, 0.8)",
                     borderRadius: "24px",
@@ -511,7 +530,7 @@ export default function ProductDetail() {
                         ⭐ Reviews & Ratings
                     </h2>
 
-                    {/* Write Review Form (only if logged in) */}
+                    {/* ===== ✅ Write Review Form (only if logged in) ===== */}
                     {token && (
                         <form onSubmit={handleReviewSubmit} style={{
                             marginBottom: "40px",
@@ -527,6 +546,7 @@ export default function ProductDetail() {
                                 Write a Review
                             </h3>
 
+                            {/* ===== ✅ Rating Input with Validation ===== */}
                             <div style={{ marginBottom: "16px" }}>
                                 <label style={{
                                     display: "block",
@@ -547,31 +567,80 @@ export default function ProductDetail() {
                                         accentColor: "#1E90FF"
                                     }}
                                 />
+                                {/* ✅ Display rating validation error */}
+                                {reviewErrors.rating && (
+                                    <div style={{
+                                        color: "#dc3545",
+                                        fontSize: "12px",
+                                        marginTop: "4px",
+                                        fontWeight: "600"
+                                    }}>
+                                        {reviewErrors.rating}
+                                    </div>
+                                )}
                             </div>
 
+                            {/* ===== ✅ Comment Textarea with Validation ===== */}
                             <div style={{ marginBottom: "16px" }}>
                                 <label style={{
                                     display: "block",
                                     fontWeight: "700",
                                     marginBottom: "8px"
                                 }}>
-                                    Comment:
+                                    Comment: (10-1000 characters)
                                 </label>
                                 <textarea
                                     value={comment}
                                     onChange={(e) => setComment(e.target.value)}
                                     rows="4"
-                                    placeholder="Share your experience with this product..."
+                                    placeholder="Share your experience with this product... (minimum 10 characters)"
                                     style={{
                                         width: "100%",
                                         padding: "12px",
                                         borderRadius: "8px",
-                                        border: "2px solid rgba(30,144,255,0.3)",
+                                        border: reviewErrors.comment
+                                            ? "2px solid #dc3545"
+                                            : "2px solid rgba(30,144,255,0.3)",
                                         fontSize: "15px",
                                         fontFamily: "inherit",
-                                        resize: "vertical"
+                                        resize: "vertical",
+                                        background: reviewErrors.comment
+                                            ? "rgba(220,53,69,0.05)"
+                                            : "white"
                                     }}
                                 />
+                                {/* ✅ Character counter */}
+                                <div style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    marginTop: "4px"
+                                }}>
+                                    <div style={{
+                                        fontSize: "12px",
+                                        color: comment.length > 1000 ? "#dc3545" : "#666"
+                                    }}>
+                                        {comment.length} / 1000 characters
+                                    </div>
+                                    {comment.trim().length > 0 && comment.trim().length < 10 && (
+                                        <div style={{
+                                            fontSize: "12px",
+                                            color: "#f39c12"
+                                        }}>
+                                            {10 - comment.trim().length} more needed
+                                        </div>
+                                    )}
+                                </div>
+                                {/* ✅ Display comment validation error */}
+                                {reviewErrors.comment && (
+                                    <div style={{
+                                        color: "#dc3545",
+                                        fontSize: "12px",
+                                        marginTop: "4px",
+                                        fontWeight: "600"
+                                    }}>
+                                        {reviewErrors.comment}
+                                    </div>
+                                )}
                             </div>
 
                             <button
@@ -604,22 +673,6 @@ export default function ProductDetail() {
                             )}
                         </form>
                     )}
-                    {/* Rating input */}
-                    <div className="field">
-                        {/* ...your existing rating input/select... */}
-                        {reviewErrors.rating && (
-                            <p className="text-red-600 text-sm mt-1">{reviewErrors.rating}</p>
-                        )}
-                    </div>
-
-                    {/* Comment textarea */}
-                    <div className="field">
-                        {/* ...your existing textarea... */}
-                        {reviewErrors.comment && (
-                            <p className="text-red-600 text-sm mt-1">{reviewErrors.comment}</p>
-                        )}
-                    </div>
-
 
                     {/* Reviews List */}
                     <div style={{ display: "grid", gap: "20px" }}>

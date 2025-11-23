@@ -136,7 +136,7 @@ export default function AdminDashboard() {
         { label: "Payment History", icon: "📊", link: "/payment-history", color: "#17a2b8" }, // ⭐ NEW
         { label: "Categories", icon: "🗂️", link: "/categories", color: "#9C27B0" },
         { label: "Discounts", icon: "🏷️", link: "/discounts", color: "#dc3545" },
-        { label: "Reviews", icon: "⭐", link: "/reviews", color: "#FF6B6B" }
+        { label: "Reviews", icon: "⭐", link: "/api/reviews", color: "#FF6B6B" }
     ];
 
 

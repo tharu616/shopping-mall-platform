@@ -38,7 +38,14 @@ export default function Categories() {
         if (cat.name && cat.name.trim().length < 2) errors.push("Name must be at least 2 characters");
         if (cat.name && cat.name.trim().length > 100) errors.push("Name must not exceed 100 characters");
         if (cat.name && !/^[a-zA-Z0-9\s&-]+$/.test(cat.name)) errors.push("Name contains invalid characters");
-        if (cat.description && cat.description.trim().length > 500) errors.push("Description too long (max 500 chars)");
+
+        // ✅ NEW: Description validation (5-100 characters)
+        if (cat.description && cat.description.trim().length < 5) {
+            errors.push("Description must be at least 5 characters");
+        }
+        if (cat.description && cat.description.trim().length > 100) {
+            errors.push("Description must not exceed 100 characters");
+        }
 
         return errors.length > 0 ? errors.join(", ") : "";
     }
@@ -68,8 +75,11 @@ export default function Categories() {
         }
 
         if (name === "description") {
-            if (value && value.trim().length > 500) {
-                error = "Description must not exceed 500 characters";
+            // ✅ NEW: Description validation (5-100 characters)
+            if (value && value.trim().length > 0 && value.trim().length < 5) {
+                error = "Description must be at least 5 characters";
+            } else if (value && value.trim().length > 100) {
+                error = "Description must not exceed 100 characters";
             }
         }
 
@@ -159,7 +169,6 @@ export default function Categories() {
             return;
         }
 
-        // ✅ Simple browser confirmation
         const confirmed = window.confirm(
             `Are you sure you want to delete "${cat.name}"?\n\nThis action is permanent and cannot be undone.`
         );
@@ -197,7 +206,6 @@ export default function Categories() {
 
     return (
         <div style={{ padding: "30px", fontFamily: "Arial, sans-serif", background: "#ecf0f1", minHeight: "100vh" }}>
-            {/* Header */}
             <div style={{ textAlign: "center", marginBottom: "40px" }}>
                 <h1 style={{ fontSize: "42px", color: "#2c3e50", marginBottom: "10px" }}>
                     📂 Categories
@@ -207,7 +215,6 @@ export default function Categories() {
                 </p>
             </div>
 
-            {/* Success/Error Message */}
             {msg && (
                 <div
                     style={{
@@ -226,7 +233,6 @@ export default function Categories() {
                 </div>
             )}
 
-            {/* Create/Edit Category Form - Admin Only */}
             {role === "ADMIN" && (
                 <div
                     style={{
@@ -271,13 +277,13 @@ export default function Categories() {
 
                         <div style={{ marginBottom: "20px" }}>
                             <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#555", fontWeight: "bold" }}>
-                                📄 Description
+                                📄 Description (5-100 characters)
                             </label>
                             <textarea
                                 name="description"
                                 value={catFields.description}
                                 onChange={handleFieldChange}
-                                placeholder="Enter category description"
+                                placeholder="Enter category description (minimum 5 characters)"
                                 rows="4"
                                 style={{
                                     width: "100%",
@@ -295,6 +301,14 @@ export default function Categories() {
                                     {fieldErrors.description}
                                 </div>
                             )}
+                            {/* ✅ Character counter */}
+                            <div style={{
+                                fontSize: "12px",
+                                color: catFields.description.length > 100 ? "#dc3545" : "#666",
+                                marginTop: "4px"
+                            }}>
+                                {catFields.description.length} / 100 characters
+                            </div>
                         </div>
 
                         <button
@@ -352,7 +366,6 @@ export default function Categories() {
                 </div>
             )}
 
-            {/* All Categories List */}
             <div
                 style={{
                     background: "white",
@@ -427,7 +440,6 @@ export default function Categories() {
                                     </p>
 
                                     <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                                        {/* View Products Button */}
                                         <button
                                             onClick={() => handleViewProducts(cat)}
                                             disabled={!!catErr}
@@ -451,7 +463,6 @@ export default function Categories() {
                                             👁️ View
                                         </button>
 
-                                        {/* Edit Button - Admin Only */}
                                         {role === "ADMIN" && (
                                             <button
                                                 onClick={() => handleEdit(cat)}
@@ -477,7 +488,6 @@ export default function Categories() {
                                             </button>
                                         )}
 
-                                        {/* Delete Button - Admin Only */}
                                         {role === "ADMIN" && (
                                             <button
                                                 onClick={() => handleDelete(cat)}
