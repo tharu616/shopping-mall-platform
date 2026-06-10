@@ -1,54 +1,55 @@
+// src/AuthContext.jsx
 import { createContext, useState, useContext, useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
 
-const AuthContext = createContext();
+// ✅ Safe default so destructuring never fails
+const AuthContext = createContext({
+    token: null,
+    role: null,
+    login: () => {},
+    logout: () => {},
+});
 
 export function AuthProvider({ children }) {
-    const [token, setToken] = useState(localStorage.getItem("token"));
+    const [token, setToken] = useState(() => localStorage.getItem("token"));
     const [role, setRole] = useState(null);
 
-    useEffect(() => {
-        if (token) {
-            try {
-                const decoded = jwtDecode(token);
-                console.log("Decoded token:", decoded);
-
-                // Extract role from token (check your backend JWT structure)
-                // It might be decoded.role or decoded.authorities[0].authority
-                const userRole = decoded.role ||
-                    decoded.authorities?.[0]?.authority ||
-                    decoded.authorities?.[0] ||
-                    "CUSTOMER";
-
-                setRole(userRole.replace("ROLE_", "")); // Remove ROLE_ prefix if present
-            } catch (err) {
-                console.error("Invalid token - logging out");
-                logout();
-            }
-        }
-    }, [token]);
-
-    const login = (newToken) => {
-        setToken(newToken);
-        localStorage.setItem("token", newToken);
-
-        // Decode immediately after login
+    const extractRole = (tkn) => {
         try {
-            const decoded = jwtDecode(newToken);
-            const userRole = decoded.role ||
+            const decoded = jwtDecode(tkn);
+            const userRole =
+                decoded.role ||
                 decoded.authorities?.[0]?.authority ||
                 decoded.authorities?.[0] ||
                 "CUSTOMER";
-            setRole(userRole.replace("ROLE_", ""));
-        } catch (err) {
-            console.error("Failed to decode token");
+            return userRole.replace("ROLE_", "");
+        } catch {
+            return null;
         }
     };
 
+    // ✅ On first load, extract role from existing token
+    useEffect(() => {
+        if (token) {
+            const r = extractRole(token);
+            if (r) {
+                setRole(r);
+            } else {
+                logout();
+            }
+        }
+    }, []);
+
+    const login = (newToken) => {
+        localStorage.setItem("token", newToken);
+        setToken(newToken);
+        setRole(extractRole(newToken));
+    };
+
     const logout = () => {
+        localStorage.removeItem("token");
         setToken(null);
         setRole(null);
-        localStorage.removeItem("token");
     };
 
     return (
@@ -58,4 +59,11 @@ export function AuthProvider({ children }) {
     );
 }
 
-export const useAuth = () => useContext(AuthContext);
+// ✅ Safe hook — never returns undefined
+export const useAuth = () => {
+    const ctx = useContext(AuthContext);
+    if (!ctx) {
+        throw new Error("useAuth must be used inside <AuthProvider>");
+    }
+    return ctx;
+};

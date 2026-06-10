@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import API from "../../api";
+import API from "../../api/api";
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState("");
@@ -12,7 +12,6 @@ export default function ForgotPassword() {
         e.preventDefault();
         setMessage("");
         setLoading(true);
-
         try {
             await API.post("/auth/forgot-password", { email });
             setSuccess(true);
@@ -24,151 +23,94 @@ export default function ForgotPassword() {
     };
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px"
-        }}>
-            <div style={{
-                background: "rgba(255, 255, 255, 0.95)",
-                backdropFilter: "blur(20px)",
-                borderRadius: "24px",
-                padding: "40px",
-                maxWidth: "450px",
-                width: "100%",
-                boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-            }}>
-                <h1 style={{
-                    fontSize: "32px",
-                    fontWeight: "800",
-                    color: "#1A1A2E",
-                    textAlign: "center",
-                    marginBottom: "10px"
-                }}>
-                    🔑 Forgot Password?
-                </h1>
-                <p style={{
-                    textAlign: "center",
-                    color: "#666",
-                    marginBottom: "30px",
-                    fontSize: "15px"
-                }}>
-                    Enter your email to receive a password reset link
-                </p>
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a] px-4 py-16 relative overflow-hidden">
+            <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-[100px] animate-floatSlow pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-violet-600/10 blur-[100px] animate-floatSlow pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
 
-                {!success ? (
-                    <form onSubmit={handleSubmit}>
-                        <div style={{ marginBottom: "20px" }}>
-                            <label style={{
-                                display: "block",
-                                fontWeight: "700",
-                                color: "#1A1A2E",
-                                marginBottom: "8px",
-                                fontSize: "14px"
-                            }}>
-                                Email Address
-                            </label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                placeholder="your@email.com"
-                                style={{
-                                    width: "100%",
-                                    padding: "14px 18px",
-                                    borderRadius: "12px",
-                                    border: "2px solid rgba(30,144,255,0.3)",
-                                    fontSize: "15px",
-                                    outline: "none"
-                                }}
-                            />
+            <div className="relative z-10 w-full max-w-md">
+                <div className="text-center mb-8">
+                    <Link to="/login" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm transition-colors">
+                        ← Back to Login
+                    </Link>
+                </div>
+
+                <div className="glass-card">
+                    {/* Header */}
+                    <div className="text-center mb-10">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-3xl mx-auto mb-5 shadow-lg shadow-blue-500/30">
+                            🔑
                         </div>
+                        <h1 className="text-4xl font-black text-white mb-2 tracking-tight">Forgot Password?</h1>
+                        <p className="text-slate-400 text-sm">Enter your email to receive a reset link</p>
+                    </div>
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            style={{
-                                width: "100%",
-                                padding: "16px",
-                                background: loading ? "#ccc" : "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "12px",
-                                fontSize: "16px",
-                                fontWeight: "700",
-                                cursor: loading ? "not-allowed" : "pointer",
-                                marginBottom: "16px"
-                            }}
-                        >
-                            {loading ? "Sending..." : "Send Reset Link"}
-                        </button>
-
-                        {message && !success && (
-                            <div style={{
-                                padding: "12px",
-                                background: "rgba(220,53,69,0.1)",
-                                color: "#dc3545",
-                                borderRadius: "10px",
-                                marginBottom: "16px",
-                                fontSize: "14px",
-                                fontWeight: "600",
-                                textAlign: "center"
-                            }}>
-                                {message}
+                    {!success ? (
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                            <div>
+                                <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                    Email Address
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    placeholder="you@example.com"
+                                    className="auth-input"
+                                />
                             </div>
-                        )}
 
-                        <div style={{ textAlign: "center" }}>
-                            <Link to="/login" style={{
-                                color: "#1E90FF",
-                                textDecoration: "none",
-                                fontWeight: "600",
-                                fontSize: "14px"
-                            }}>
-                                ← Back to Login
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={`btn-primary w-full justify-center py-4 text-base mt-1 ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                        Sending...
+                                    </>
+                                ) : (
+                                    <>
+                                        Send Reset Link
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                        </svg>
+                                    </>
+                                )}
+                            </button>
+
+                            {message && !success && (
+                                <div className="flex items-center gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm font-medium">
+                                    <span className="text-lg">⚠️</span>
+                                    {message}
+                                </div>
+                            )}
+                        </form>
+                    ) : (
+                        /* ── Success state ── */
+                        <div className="text-center flex flex-col items-center gap-5">
+                            <div className="w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-4xl">
+                                ✅
+                            </div>
+                            <div className="flex items-center gap-3 w-full p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm font-semibold">
+                                <span>✓</span> {message}
+                            </div>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Check your email inbox and click the reset link to continue.
+                            </p>
+                            <Link to="/login" className="w-full">
+                                <button className="btn-primary w-full justify-center py-4">
+                                    Return to Login
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                    </svg>
+                                </button>
                             </Link>
                         </div>
-                    </form>
-                ) : (
-                    <div style={{ textAlign: "center" }}>
-                        <div style={{
-                            fontSize: "64px",
-                            marginBottom: "20px"
-                        }}>
-                            ✅
-                        </div>
-                        <div style={{
-                            padding: "16px",
-                            background: "rgba(76,175,80,0.1)",
-                            color: "#4CAF50",
-                            borderRadius: "12px",
-                            marginBottom: "20px",
-                            fontWeight: "600"
-                        }}>
-                            {message}
-                        </div>
-                        <p style={{ color: "#666", fontSize: "14px", marginBottom: "20px" }}>
-                            Check your email inbox and click the reset link
-                        </p>
-                        <Link to="/login">
-                            <button style={{
-                                padding: "12px 24px",
-                                background: "#1E90FF",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "10px",
-                                cursor: "pointer",
-                                fontWeight: "700"
-                            }}>
-                                Return to Login
-                            </button>
-                        </Link>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );

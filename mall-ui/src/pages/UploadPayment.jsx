@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api";
+import API from "../api/api";
 
 export default function UploadPayment() {
     const navigate = useNavigate();
@@ -11,50 +11,34 @@ export default function UploadPayment() {
     const [reference, setReference] = useState("");
     const [receiptFile, setReceiptFile] = useState(null);
     const [receiptUrl, setReceiptUrl] = useState("");
-
-    // Card fields
     const [cardNumber, setCardNumber] = useState("");
     const [cardHolderName, setCardHolderName] = useState("");
     const [cardExpiryDate, setCardExpiryDate] = useState("");
     const [cardCvv, setCardCvv] = useState("");
-
-    // Bank fields
     const [bankName, setBankName] = useState("");
     const [accountNumber, setAccountNumber] = useState("");
     const [accountHolderName, setAccountHolderName] = useState("");
     const [branchCode, setBranchCode] = useState("");
     const [transferDate, setTransferDate] = useState("");
-
-    // PayPal fields
     const [paypalEmail, setPaypalEmail] = useState("");
     const [paypalTransactionId, setPaypalTransactionId] = useState("");
-
     const [loading, setLoading] = useState(false);
     const [loadingOrders, setLoadingOrders] = useState(true);
     const [message, setMessage] = useState("");
 
-    useEffect(() => {
-        fetchOrders();
-    }, []);
+    useEffect(() => { fetchOrders(); }, []);
 
     async function fetchOrders() {
         setLoadingOrders(true);
         try {
             const res = await API.get("/orders/me");
-            console.log("Orders API Response:", res.data); // ADD THIS FOR DEBUGGING
-
-            // Filter out only DELIVERED and CANCELLED orders
-            // PENDING, CONFIRMED, SHIPPED should all show
+            console.log("Orders API Response:", res.data);
             const availableOrders = res.data.filter(o =>
                 o.status !== "CANCELLED" && o.status !== "DELIVERED"
             );
-
-            console.log("Filtered available orders:", availableOrders); // ADD THIS FOR DEBUGGING
+            console.log("Filtered available orders:", availableOrders);
             setOrders(availableOrders);
-
-            if (availableOrders.length === 0) {
-                setMessage("ℹ️ No orders available for payment");
-            }
+            if (availableOrders.length === 0) setMessage("ℹ️ No orders available for payment");
         } catch (err) {
             console.error("Error fetching orders:", err);
             setMessage("❌ Failed to load orders: " + (err.response?.data?.message || err.message));
@@ -63,12 +47,9 @@ export default function UploadPayment() {
         }
     }
 
-
     async function handleSubmit(e) {
         e.preventDefault();
-        setLoading(true);
-        setMessage("");
-
+        setLoading(true); setMessage("");
         try {
             const payload = {
                 orderId: parseInt(selectedOrder),
@@ -76,32 +57,11 @@ export default function UploadPayment() {
                 amount: parseFloat(amount),
                 reference: reference || undefined,
                 receiptUrl: receiptUrl || undefined,
-
-                // Card fields
-                ...(paymentMethod === "CARD" && {
-                    cardNumber,
-                    cardHolderName,
-                    cardExpiryDate,
-                    cardCvv
-                }),
-
-                // Bank fields
-                ...(paymentMethod === "BANK_TRANSFER" && {
-                    bankName,
-                    accountNumber,
-                    accountHolderName,
-                    branchCode,
-                    transferDate
-                }),
-
-                // PayPal fields
-                ...(paymentMethod === "PAYPAL" && {
-                    paypalEmail,
-                    paypalTransactionId
-                })
+                ...(paymentMethod === "CARD" && { cardNumber, cardHolderName, cardExpiryDate, cardCvv }),
+                ...(paymentMethod === "BANK_TRANSFER" && { bankName, accountNumber, accountHolderName, branchCode, transferDate }),
+                ...(paymentMethod === "PAYPAL" && { paypalEmail, paypalTransactionId })
             };
-
-            console.log("Submitting payment:", payload); // Debug log
+            console.log("Submitting payment:", payload);
             await API.post("/payments/upload", payload);
             setMessage("✓ Payment submitted successfully!");
             setTimeout(() => navigate("/payments"), 2000);
@@ -113,510 +73,291 @@ export default function UploadPayment() {
         }
     }
 
+    const inputClass = "w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 text-sm outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all";
+
+    const paymentMethods = [
+        { value: "CARD",             icon: "💳", label: "Credit/Debit Card",  grad: "from-blue-500 to-violet-600"   },
+        { value: "BANK_TRANSFER",    icon: "🏦", label: "Bank Transfer",       grad: "from-emerald-500 to-teal-600"  },
+        { value: "PAYPAL",           icon: "💰", label: "PayPal",              grad: "from-amber-400 to-orange-500"  },
+        { value: "CASH_ON_DELIVERY", icon: "💵", label: "Cash on Delivery",    grad: "from-violet-500 to-purple-700" },
+    ];
+
     return (
-        <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px" }}>
-            <button
-                onClick={() => navigate("/payments")}
-                style={{
-                    background: "white",
-                    border: "2px solid #e0e0e0",
-                    padding: "10px 20px",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    marginBottom: "20px"
-                }}
-            >
-                ← Back to Payments
-            </button>
+        <div className="min-h-screen bg-[#0a0a1a] px-4 py-16 relative overflow-hidden">
+            {/* Orbs */}
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-blue-600/8 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px] pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
 
-            <div style={{
-                background: "white",
-                padding: "40px",
-                borderRadius: "16px",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
-            }}>
-                <h2 style={{ marginBottom: "10px" }}>💳 Upload Payment Receipt</h2>
-                <p style={{ color: "#666", marginBottom: "30px" }}>
-                    Submit your payment proof for order verification
-                </p>
+            <div className="relative z-10 max-w-2xl mx-auto">
 
-                <form onSubmit={handleSubmit}>
-                    {/* Select Order */}
-                    <div style={{ marginBottom: "20px" }}>
-                        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                            Select Order *
-                        </label>
-                        {loadingOrders ? (
-                            <div style={{ padding: "12px", textAlign: "center", color: "#666" }}>
-                                Loading orders...
-                            </div>
-                        ) : (
-                            <select
-                                value={selectedOrder}
-                                onChange={(e) => {
-                                    const orderId = e.target.value;
-                                    setSelectedOrder(orderId);
-                                    // Auto-fill amount from selected order
-                                    const order = orders.find(o => o.id === parseInt(orderId));
-                                    if (order && order.totalAmount) {
-                                        setAmount(order.totalAmount.toString());
-                                    }
-                                }}
-                                required
-                                style={{
-                                    width: "100%",
-                                    padding: "12px",
-                                    border: "2px solid #e0e0e0",
-                                    borderRadius: "8px",
-                                    fontSize: "16px"
-                                }}
-                            >
-                                <option value="">-- Select an Order ({orders.length} available) --</option>
-                                {orders.map(order => (
-                                    <option key={order.id} value={order.id}>
-                                        Order #{order.id} - ${(order.totalAmount || 0).toFixed(2)} - {order.status}
-                                    </option>
-                                ))}
-                            </select>
+                {/* Back */}
+                <button
+                    onClick={() => navigate("/payments")}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 mb-10 rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/20 text-sm font-semibold transition-all"
+                >
+                    ← Back to Payments
+                </button>
 
-                        )}
-                        {orders.length === 0 && !loadingOrders && (
-                            <small style={{ color: "#999", display: "block", marginTop: "5px" }}>
-                                No orders available. Please place an order first.
-                            </small>
-                        )}
+                {/* Title */}
+                <div className="mb-10">
+                    <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">Checkout</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight">Upload Payment</h1>
+                    <p className="text-slate-400 text-sm mt-2">Submit your payment proof for order verification</p>
+                </div>
+
+                {/* Global message */}
+                {message && (
+                    <div className={`flex items-center gap-3 p-4 mb-6 rounded-xl text-sm font-medium ${
+                        message.includes("✓") ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+                        : message.includes("ℹ️") ? "bg-blue-500/10 border border-blue-500/30 text-blue-300"
+                        : "bg-rose-500/10 border border-rose-500/30 text-rose-300"
+                    }`}>
+                        <span className="text-lg">{message.includes("✓") ? "✅" : message.includes("ℹ️") ? "ℹ️" : "⚠️"}</span>
+                        {message}
                     </div>
+                )}
 
-                    {/* Payment Method */}
-                    <div style={{ marginBottom: "20px" }}>
-                        <label style={{ display: "block", marginBottom: "12px", fontWeight: "600" }}>
-                            Payment Method *
-                        </label>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "15px" }}>
-                            {[
-                                { value: "CARD", icon: "💳", label: "Credit/Debit Card" },
-                                { value: "BANK_TRANSFER", icon: "🏦", label: "Bank Transfer" },
-                                { value: "PAYPAL", icon: "💰", label: "PayPal" },
-                                { value: "CASH_ON_DELIVERY", icon: "💵", label: "Cash on Delivery" }
-                            ].map(method => (
-                                <div
-                                    key={method.value}
-                                    onClick={() => setPaymentMethod(method.value)}
-                                    style={{
-                                        padding: "20px",
-                                        border: paymentMethod === method.value ? "3px solid #3b82f6" : "2px solid #e0e0e0",
-                                        borderRadius: "12px",
-                                        cursor: "pointer",
-                                        textAlign: "center",
-                                        background: paymentMethod === method.value ? "#eff6ff" : "white",
-                                        transition: "all 0.3s"
+                <div className="glass-card">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-7">
+
+                        {/* Select Order */}
+                        <div>
+                            <label className="block text-white text-xs font-bold uppercase tracking-widest mb-3">
+                                Select Order <span className="text-rose-400">*</span>
+                            </label>
+                            {loadingOrders ? (
+                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-400 text-sm">
+                                    <div className="w-4 h-4 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                                    Loading orders...
+                                </div>
+                            ) : (
+                                <select
+                                    value={selectedOrder}
+                                    onChange={(e) => {
+                                        const orderId = e.target.value;
+                                        setSelectedOrder(orderId);
+                                        const order = orders.find(o => o.id === parseInt(orderId));
+                                        if (order?.totalAmount) setAmount(order.totalAmount.toString());
                                     }}
+                                    required
+                                    className={`${inputClass} cursor-pointer`}
                                 >
-                                    <div style={{ fontSize: "32px", marginBottom: "8px" }}>{method.icon}</div>
-                                    <div style={{ fontWeight: "600" }}>{method.label}</div>
-                                </div>
-                            ))}
+                                    <option value="" className="bg-[#1a1040]">
+                                        -- Select an Order ({orders.length} available) --
+                                    </option>
+                                    {orders.map(order => (
+                                        <option key={order.id} value={order.id} className="bg-[#1a1040]">
+                                            Order #{order.id} — ${(order.totalAmount || 0).toFixed(2)} — {order.status}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                            {orders.length === 0 && !loadingOrders && (
+                                <p className="text-slate-500 text-xs mt-2">No orders available. Please place an order first.</p>
+                            )}
                         </div>
-                    </div>
 
-                    {/* Amount */}
-                    <div style={{ marginBottom: "20px" }}>
-                        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                            Amount Paid *
-                        </label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            placeholder="e.g., 1095.00"
-                            required
-                            style={{
-                                width: "100%",
-                                padding: "12px",
-                                border: "2px solid #e0e0e0",
-                                borderRadius: "8px",
-                                fontSize: "16px"
-                            }}
-                        />
-                    </div>
-
-                    {/* Payment Reference */}
-                    <div style={{ marginBottom: "20px" }}>
-                        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                            Payment Reference / Transaction ID
-                        </label>
-                        <input
-                            type="text"
-                            value={reference}
-                            onChange={(e) => setReference(e.target.value)}
-                            placeholder="e.g., TXN123456789"
-                            style={{
-                                width: "100%",
-                                padding: "12px",
-                                border: "2px solid #e0e0e0",
-                                borderRadius: "8px",
-                                fontSize: "16px"
-                            }}
-                        />
-                        <small style={{ color: "#999" }}>
-                            Enter your bank transfer reference or transaction ID
-                        </small>
-                    </div>
-
-                    {/* === CARD PAYMENT FIELDS === */}
-                    {paymentMethod === "CARD" && (
-                        <div style={{
-                            padding: "20px",
-                            background: "#f8fafc",
-                            borderRadius: "12px",
-                            marginBottom: "20px"
-                        }}>
-                            <h3 style={{ marginBottom: "20px" }}>💳 Card Details</h3>
-
-                            <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                    Card Number *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={cardNumber}
-                                    onChange={(e) => setCardNumber(e.target.value.replace(/\s/g, ''))}
-                                    placeholder="1234 5678 9012 3456"
-                                    maxLength="16"
-                                    required
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px",
-                                        border: "2px solid #e0e0e0",
-                                        borderRadius: "8px",
-                                        fontSize: "16px"
-                                    }}
-                                />
+                        {/* Payment Method */}
+                        <div>
+                            <label className="block text-white text-xs font-bold uppercase tracking-widest mb-3">
+                                Payment Method <span className="text-rose-400">*</span>
+                            </label>
+                            <div className="grid grid-cols-2 gap-4">
+                                {paymentMethods.map(method => (
+                                    <div
+                                        key={method.value}
+                                        onClick={() => setPaymentMethod(method.value)}
+                                        className={`relative p-5 rounded-2xl border cursor-pointer transition-all duration-200 text-center ${
+                                            paymentMethod === method.value
+                                                ? "border-amber-400/50 bg-amber-400/5"
+                                                : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/5"
+                                        }`}
+                                    >
+                                        {paymentMethod === method.value && (
+                                            <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center text-black text-xs font-black">✓</div>
+                                        )}
+                                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${method.grad} flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg`}>
+                                            {method.icon}
+                                        </div>
+                                        <p className={`text-sm font-bold ${paymentMethod === method.value ? "text-white" : "text-slate-400"}`}>
+                                            {method.label}
+                                        </p>
+                                    </div>
+                                ))}
                             </div>
+                        </div>
 
-                            <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                    Cardholder Name *
+                        {/* Amount + Reference */}
+                        <div className="grid sm:grid-cols-2 gap-5">
+                            <div>
+                                <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                    Amount Paid <span className="text-rose-400">*</span>
                                 </label>
-                                <input
-                                    type="text"
-                                    value={cardHolderName}
-                                    onChange={(e) => setCardHolderName(e.target.value)}
-                                    placeholder="John Doe"
-                                    required
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px",
-                                        border: "2px solid #e0e0e0",
-                                        borderRadius: "8px",
-                                        fontSize: "16px"
-                                    }}
-                                />
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">$</span>
+                                    <input type="number" step="0.01" value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0.00" required className={`${inputClass} pl-8`} />
+                                </div>
                             </div>
+                            <div>
+                                <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                    Reference / Transaction ID
+                                </label>
+                                <input type="text" value={reference}
+                                    onChange={(e) => setReference(e.target.value)}
+                                    placeholder="TXN123456789" className={inputClass} />
+                            </div>
+                        </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "15px" }}>
+                        {/* ── CARD FIELDS ── */}
+                        {paymentMethod === "CARD" && (
+                            <div className="p-6 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex flex-col gap-5">
+                                <h3 className="text-white font-black flex items-center gap-2">
+                                    <span className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">💳</span>
+                                    Card Details
+                                </h3>
                                 <div>
-                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                        Expiry Date *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={cardExpiryDate}
-                                        onChange={(e) => setCardExpiryDate(e.target.value)}
-                                        placeholder="MM/YY"
-                                        maxLength="5"
-                                        required
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border: "2px solid #e0e0e0",
-                                            borderRadius: "8px",
-                                            fontSize: "16px"
-                                        }}
-                                    />
+                                    <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Card Number <span className="text-rose-400">*</span></label>
+                                    <input type="text" value={cardNumber}
+                                        onChange={(e) => setCardNumber(e.target.value.replace(/\s/g, ""))}
+                                        placeholder="1234 5678 9012 3456" maxLength="16" required className={inputClass} />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                        CVV *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={cardCvv}
-                                        onChange={(e) => setCardCvv(e.target.value)}
-                                        placeholder="123"
-                                        maxLength="3"
-                                        required
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border: "2px solid #e0e0e0",
-                                            borderRadius: "8px",
-                                            fontSize: "16px"
-                                        }}
-                                    />
+                                    <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Cardholder Name <span className="text-rose-400">*</span></label>
+                                    <input type="text" value={cardHolderName}
+                                        onChange={(e) => setCardHolderName(e.target.value)}
+                                        placeholder="John Doe" required className={inputClass} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Expiry <span className="text-rose-400">*</span></label>
+                                        <input type="text" value={cardExpiryDate}
+                                            onChange={(e) => setCardExpiryDate(e.target.value)}
+                                            placeholder="MM/YY" maxLength="5" required className={inputClass} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">CVV <span className="text-rose-400">*</span></label>
+                                        <input type="text" value={cardCvv}
+                                            onChange={(e) => setCardCvv(e.target.value)}
+                                            placeholder="123" maxLength="3" required className={inputClass} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* === BANK TRANSFER FIELDS === */}
-                    {paymentMethod === "BANK_TRANSFER" && (
-                        <div style={{
-                            padding: "20px",
-                            background: "#f8fafc",
-                            borderRadius: "12px",
-                            marginBottom: "20px"
-                        }}>
-                            <h3 style={{ marginBottom: "20px" }}>🏦 Bank Transfer Details</h3>
-
-                            <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                    Bank Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={bankName}
-                                    onChange={(e) => setBankName(e.target.value)}
-                                    placeholder="e.g., Bank of America"
-                                    required
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px",
-                                        border: "2px solid #e0e0e0",
-                                        borderRadius: "8px",
-                                        fontSize: "16px"
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                    Account Number *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={accountNumber}
-                                    onChange={(e) => setAccountNumber(e.target.value)}
-                                    placeholder="1234567890"
-                                    required
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px",
-                                        border: "2px solid #e0e0e0",
-                                        borderRadius: "8px",
-                                        fontSize: "16px"
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                    Account Holder Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={accountHolderName}
-                                    onChange={(e) => setAccountHolderName(e.target.value)}
-                                    placeholder="John Doe"
-                                    required
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px",
-                                        border: "2px solid #e0e0e0",
-                                        borderRadius: "8px",
-                                        fontSize: "16px"
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                        {/* ── BANK TRANSFER FIELDS ── */}
+                        {paymentMethod === "BANK_TRANSFER" && (
+                            <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex flex-col gap-5">
+                                <h3 className="text-white font-black flex items-center gap-2">
+                                    <span className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">🏦</span>
+                                    Bank Transfer Details
+                                </h3>
                                 <div>
-                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                        Branch Code
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={branchCode}
-                                        onChange={(e) => setBranchCode(e.target.value)}
-                                        placeholder="001"
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border: "2px solid #e0e0e0",
-                                            borderRadius: "8px",
-                                            fontSize: "16px"
-                                        }}
-                                    />
+                                    <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Bank Name <span className="text-rose-400">*</span></label>
+                                    <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Bank of America" required className={inputClass} />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                        Transfer Date
+                                    <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Account Number <span className="text-rose-400">*</span></label>
+                                    <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="1234567890" required className={inputClass} />
+                                </div>
+                                <div>
+                                    <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Account Holder <span className="text-rose-400">*</span></label>
+                                    <input type="text" value={accountHolderName} onChange={(e) => setAccountHolderName(e.target.value)} placeholder="John Doe" required className={inputClass} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Branch Code</label>
+                                        <input type="text" value={branchCode} onChange={(e) => setBranchCode(e.target.value)} placeholder="001" className={inputClass} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Transfer Date</label>
+                                        <input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={`${inputClass} [color-scheme:dark]`} />
+                                    </div>
+                                </div>
+                                {/* Receipt upload */}
+                                <div>
+                                    <label className="block text-white text-xs font-bold uppercase tracking-widest mb-3">Upload Receipt (Optional)</label>
+                                    <label className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] hover:border-emerald-400/30 transition-all cursor-pointer group">
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📎</div>
+                                        <p className="text-white text-sm font-semibold">{receiptFile ? receiptFile.name : "Click to upload"}</p>
+                                        <p className="text-slate-500 text-xs">Image or PDF, for verification</p>
+                                        <input type="file" onChange={(e) => setReceiptFile(e.target.files[0])} accept="image/*,.pdf" className="hidden" />
                                     </label>
-                                    <input
-                                        type="date"
-                                        value={transferDate}
-                                        onChange={(e) => setTransferDate(e.target.value)}
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border: "2px solid #e0e0e0",
-                                            borderRadius: "8px",
-                                            fontSize: "16px"
-                                        }}
-                                    />
                                 </div>
                             </div>
+                        )}
 
-                            <div style={{ marginTop: "15px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                    📎 Upload Receipt (Optional)
-                                </label>
-                                <input
-                                    type="file"
-                                    onChange={(e) => setReceiptFile(e.target.files[0])}
-                                    accept="image/*,.pdf"
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px",
-                                        border: "2px solid #e0e0e0",
-                                        borderRadius: "8px"
-                                    }}
-                                />
-                                <small style={{ color: "#999" }}>
-                                    Upload your bank transfer receipt for verification
-                                </small>
+                        {/* ── PAYPAL FIELDS ── */}
+                        {paymentMethod === "PAYPAL" && (
+                            <div className="p-6 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex flex-col gap-5">
+                                <h3 className="text-white font-black flex items-center gap-2">
+                                    <span className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">💰</span>
+                                    PayPal Details
+                                </h3>
+                                <div>
+                                    <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">PayPal Email <span className="text-rose-400">*</span></label>
+                                    <input type="email" value={paypalEmail} onChange={(e) => setPaypalEmail(e.target.value)} placeholder="your@email.com" required className={inputClass} />
+                                </div>
+                                <div>
+                                    <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Transaction ID <span className="text-rose-400">*</span></label>
+                                    <input type="text" value={paypalTransactionId} onChange={(e) => setPaypalTransactionId(e.target.value)} placeholder="1AB23456CD789012E" required className={inputClass} />
+                                    <p className="text-slate-500 text-xs mt-2">Find this in your PayPal transaction history</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* === PAYPAL FIELDS === */}
-                    {paymentMethod === "PAYPAL" && (
-                        <div style={{
-                            padding: "20px",
-                            background: "#f8fafc",
-                            borderRadius: "12px",
-                            marginBottom: "20px"
-                        }}>
-                            <h3 style={{ marginBottom: "20px" }}>💰 PayPal Details</h3>
-
-                            <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                    PayPal Email *
-                                </label>
-                                <input
-                                    type="email"
-                                    value={paypalEmail}
-                                    onChange={(e) => setPaypalEmail(e.target.value)}
-                                    placeholder="your@email.com"
-                                    required
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px",
-                                        border: "2px solid #e0e0e0",
-                                        borderRadius: "8px",
-                                        fontSize: "16px"
-                                    }}
-                                />
+                        {/* ── CASH ON DELIVERY ── */}
+                        {paymentMethod === "CASH_ON_DELIVERY" && (
+                            <div className="p-6 bg-violet-500/5 border border-violet-500/20 rounded-2xl text-center">
+                                <div className="w-16 h-16 rounded-2xl bg-violet-500/15 flex items-center justify-center text-4xl mx-auto mb-4">💵</div>
+                                <h3 className="text-white font-black text-lg mb-2">Cash on Delivery</h3>
+                                <p className="text-slate-400 text-sm leading-relaxed">
+                                    You will pay in cash when your order is delivered.<br/>No upfront payment required!
+                                </p>
                             </div>
+                        )}
 
-                            <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-                                    PayPal Transaction ID *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={paypalTransactionId}
-                                    onChange={(e) => setPaypalTransactionId(e.target.value)}
-                                    placeholder="e.g., 1AB23456CD789012E"
-                                    required
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px",
-                                        border: "2px solid #e0e0e0",
-                                        borderRadius: "8px",
-                                        fontSize: "16px"
-                                    }}
-                                />
-                                <small style={{ color: "#999" }}>
-                                    Find this in your PayPal transaction history
-                                </small>
-                            </div>
+                        {/* Divider */}
+                        <div className="h-px bg-white/10" />
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-3">
+                            <button
+                                type="submit"
+                                disabled={loading || !selectedOrder || !paymentMethod || loadingOrders}
+                                className={`btn-primary w-full justify-center py-4 text-base ${
+                                    (loading || !selectedOrder || !paymentMethod || loadingOrders)
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        Upload Payment
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate("/payments")}
+                                className="btn-ghost w-full justify-center py-4"
+                            >
+                                Cancel
+                            </button>
                         </div>
-                    )}
 
-                    {/* === CASH ON DELIVERY === */}
-                    {paymentMethod === "CASH_ON_DELIVERY" && (
-                        <div style={{
-                            padding: "20px",
-                            background: "#d1fae5",
-                            borderRadius: "12px",
-                            marginBottom: "20px",
-                            textAlign: "center"
-                        }}>
-                            <div style={{ fontSize: "48px", marginBottom: "15px" }}>💵</div>
-                            <h3 style={{ color: "#065f46", marginBottom: "10px" }}>
-                                Cash on Delivery Selected
-                            </h3>
-                            <p style={{ color: "#065f46" }}>
-                                You will pay in cash when your order is delivered. No upfront payment required!
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Submit Button */}
-                    <button
-                        type="submit"
-                        disabled={loading || !selectedOrder || !paymentMethod || loadingOrders}
-                        style={{
-                            width: "100%",
-                            padding: "16px",
-                            background: (loading || !selectedOrder || !paymentMethod || loadingOrders) ? "#9ca3af" : "#10b981",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "12px",
-                            fontSize: "18px",
-                            fontWeight: "600",
-                            cursor: (loading || !selectedOrder || !paymentMethod || loadingOrders) ? "not-allowed" : "pointer",
-                            marginTop: "10px"
-                        }}
-                    >
-                        {loading ? "⏳ Submitting..." : "✓ Upload Payment"}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/payments")}
-                        style={{
-                            width: "100%",
-                            padding: "16px",
-                            background: "white",
-                            color: "#333",
-                            border: "2px solid #e0e0e0",
-                            borderRadius: "12px",
-                            fontSize: "16px",
-                            fontWeight: "600",
-                            cursor: "pointer",
-                            marginTop: "15px"
-                        }}
-                    >
-                        Cancel
-                    </button>
-
-                    {message && (
-                        <div style={{
-                            marginTop: "20px",
-                            padding: "15px",
-                            background: message.includes("✓") ? "#d1fae5" : message.includes("ℹ️") ? "#e0f2fe" : "#fee2e2",
-                            color: message.includes("✓") ? "#065f46" : message.includes("ℹ️") ? "#0369a1" : "#991b1b",
-                            borderRadius: "8px",
-                            textAlign: "center",
-                            fontWeight: "600"
-                        }}>
-                            {message}
-                        </div>
-                    )}
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );

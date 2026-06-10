@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../AuthContext";
-import API from "../../api";
+import API from "../../api/api";
 
 export default function Login() {
     const [form, setForm] = useState({ email: "", password: "" });
@@ -12,7 +12,6 @@ export default function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage("");
-
         try {
             const res = await API.post("/auth/login", form);
             login(res.data.token, res.data.role);
@@ -23,181 +22,97 @@ export default function Login() {
     };
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "linear-gradient(135deg, #2E2566 0%, #4B368B 50%, #1E90FF 100%)",
-            position: "relative",
-            overflow: "hidden",
-            padding: "40px 20px"
-        }}>
-            {/* Animated Background */}
-            <div style={{
-                position: "absolute",
-                top: "10%",
-                left: "-5%",
-                width: "500px",
-                height: "500px",
-                background: "radial-gradient(circle, rgba(255,165,0,0.25), transparent 70%)",
-                borderRadius: "50%",
-                filter: "blur(70px)",
-                animation: "float 7s ease-in-out infinite"
-            }} />
+        <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#0a0a1a] px-4 py-16">
 
-            {/* Glass Form Container */}
-            <div style={{
-                background: "rgba(255, 255, 255, 0.1)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                borderRadius: "24px",
-                padding: "50px 40px",
-                width: "100%",
-                maxWidth: "450px",
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-                position: "relative",
-                zIndex: 1
-            }}>
-                <div style={{ textAlign: "center", marginBottom: "40px" }}>
-                    <h1 style={{
-                        fontSize: "42px",
-                        fontWeight: "800",
-                        color: "white",
-                        marginBottom: "8px"
-                    }}>
-                        Welcome Back
-                    </h1>
-                    <p style={{ color: "rgba(255, 255, 255, 0.8)", fontSize: "16px" }}>
-                        Login to continue shopping
-                    </p>
+            {/* Orbs */}
+            <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-amber-500/10 blur-[100px] animate-floatSlow pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-blue-600/10 blur-[100px] animate-floatSlow pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+
+            {/* Card */}
+            <div className="relative z-10 w-full max-w-md">
+
+                {/* Logo */}
+                <div className="text-center mb-8">
+                    <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm transition-colors">
+                        ← Back to Home
+                    </Link>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
-                    <div>
-                        <label style={{
-                            color: "white",
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            marginBottom: "8px",
-                            display: "block"
-                        }}>
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            placeholder="Enter your email"
-                            value={form.email}
-                            onChange={(e) => setForm({ ...form, email: e.target.value })}
-                            required
-                            style={{
-                                width: "100%",
-                                padding: "14px 18px",
-                                borderRadius: "12px",
-                                border: "1px solid rgba(255, 255, 255, 0.2)",
-                                background: "rgba(255, 255, 255, 0.15)",
-                                color: "white",
-                                fontSize: "15px",
-                                outline: "none"
-                            }}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={{
-                            color: "white",
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            marginBottom: "8px",
-                            display: "block"
-                        }}>
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="Enter your password"
-                            value={form.password}
-                            onChange={(e) => setForm({ ...form, password: e.target.value })}
-                            required
-                            style={{
-                                width: "100%",
-                                padding: "14px 18px",
-                                borderRadius: "12px",
-                                border: "1px solid rgba(255, 255, 255, 0.2)",
-                                background: "rgba(255, 255, 255, 0.15)",
-                                color: "white",
-                                fontSize: "15px",
-                                outline: "none"
-                            }}
-                        />
-                    </div>
-                    {/* Add this after the password input */}
-                    <div style={{ textAlign: "right", marginBottom: "20px" }}>
-                        <Link to="/forgot-password" style={{
-                            color: "#1E90FF",
-                            textDecoration: "none",
-                            fontSize: "14px",
-                            fontWeight: "600"
-                        }}>
-                            Forgot Password?
-                        </Link>
-                    </div>
-
-
-                    <button type="submit" style={{
-                        width: "100%",
-                        padding: "16px",
-                        borderRadius: "12px",
-                        border: "none",
-                        background: "linear-gradient(135deg, #FFA500, #FF8C00)",
-                        color: "white",
-                        fontSize: "16px",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        marginTop: "10px",
-                        boxShadow: "0 8px 24px rgba(255, 165, 0, 0.4)",
-                        transition: "all 0.3s"
-                    }}>
-                        LOGIN
-                    </button>
-
-                    {message && (
-                        <div style={{
-                            padding: "14px",
-                            borderRadius: "10px",
-                            background: "rgba(244, 67, 54, 0.2)",
-                            border: "1px solid #f44336",
-                            color: "white",
-                            textAlign: "center",
-                            fontSize: "14px"
-                        }}>
-                            {message}
+                <div className="glass-card">
+                    {/* Header */}
+                    <div className="text-center mb-10">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-3xl mx-auto mb-5 shadow-lg shadow-amber-500/30">
+                            🔑
                         </div>
-                    )}
+                        <h1 className="text-4xl font-black text-white mb-2 tracking-tight">Welcome Back</h1>
+                        <p className="text-slate-400 text-sm">Login to continue shopping</p>
+                    </div>
 
-                    <div style={{ textAlign: "center", marginTop: "20px" }}>
-                        <p style={{ color: "rgba(255, 255, 255, 0.8)", fontSize: "14px" }}>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                        {/* Email */}
+                        <div>
+                            <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                Email
+                            </label>
+                            <input
+                                type="email"
+                                placeholder="you@example.com"
+                                value={form.email}
+                                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                                required
+                                className="auth-input"
+                            />
+                        </div>
+
+                        {/* Password */}
+                        <div>
+                            <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                value={form.password}
+                                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                                required
+                                className="auth-input"
+                            />
+                        </div>
+
+                        {/* Forgot password */}
+                        <div className="text-right -mt-2">
+                            <Link to="/forgot-password" className="text-amber-400 hover:text-amber-300 text-xs font-semibold transition-colors">
+                                Forgot Password?
+                            </Link>
+                        </div>
+
+                        {/* Submit */}
+                        <button type="submit" className="btn-primary w-full justify-center py-4 text-base mt-1">
+                            Login
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                        </button>
+
+                        {/* Error message */}
+                        {message && (
+                            <div className="flex items-center gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm font-medium">
+                                <span className="text-lg">⚠️</span>
+                                {message}
+                            </div>
+                        )}
+
+                        {/* Register link */}
+                        <p className="text-center text-slate-400 text-sm pt-2">
                             Don't have an account?{" "}
-                            <Link to="/register" style={{
-                                color: "#FFA500",
-                                fontWeight: "700",
-                                textDecoration: "none"
-                            }}>
+                            <Link to="/register" className="text-amber-400 hover:text-amber-300 font-bold transition-colors">
                                 Register
                             </Link>
                         </p>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
-
-            <style>{`
-                @keyframes float {
-                    0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-20px); }
-                }
-                input::placeholder { color: rgba(255, 255, 255, 0.5); }
-            `}</style>
         </div>
     );
 }

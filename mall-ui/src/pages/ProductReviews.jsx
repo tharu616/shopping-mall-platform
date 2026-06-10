@@ -11,23 +11,12 @@ export default function ProductReviews({ productId, reviews, onReviewAdded }) {
 
     async function handleSubmit(e) {
         e.preventDefault();
-        if (!token) {
-            setMsg("Please login to submit a review");
-            return;
-        }
-
-        setSubmitting(true);
-        setMsg("");
-
+        if (!token) { setMsg("Please login to submit a review"); return; }
+        setSubmitting(true); setMsg("");
         try {
-            await API.post("/api/reviews", {
-                productId,
-                rating,
-                comment: comment.trim()
-            });
+            await API.post("/api/reviews", { productId, rating, comment: comment.trim() });
             setMsg("✓ Review submitted! It will appear after admin approval.");
-            setRating(5);
-            setComment("");
+            setRating(5); setComment("");
             if (onReviewAdded) onReviewAdded();
             setTimeout(() => setMsg(""), 5000);
         } catch (err) {
@@ -36,185 +25,124 @@ export default function ProductReviews({ productId, reviews, onReviewAdded }) {
         setSubmitting(false);
     }
 
-    const getStars = (r) => {
-        return "⭐".repeat(r) + "☆".repeat(5 - r);
-    };
-
     return (
-        <div style={{
-            background: "rgba(255, 255, 255, 0.8)",
-            borderRadius: "24px",
-            padding: "40px",
-            marginTop: "30px"
-        }}>
-            <h2 style={{
-                fontSize: "28px",
-                fontWeight: "800",
-                color: "#1A1A2E",
-                marginBottom: "24px"
-            }}>
-                ⭐ Customer Reviews
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 mt-8">
+
+            {/* Header */}
+            <h2 className="text-white text-2xl font-black mb-8 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-amber-400/15 flex items-center justify-center text-lg">⭐</span>
+                Customer Reviews
+                {reviews?.length > 0 && (
+                    <span className="ml-2 px-3 py-1 bg-amber-400/10 border border-amber-400/20 text-amber-400 text-sm font-bold rounded-full">
+                        {reviews.length}
+                    </span>
+                )}
             </h2>
 
-            {/* Submit Review Form */}
+            {/* Write Review Form */}
             {token && (
-                <form onSubmit={handleSubmit} style={{
-                    marginBottom: "40px",
-                    padding: "24px",
-                    background: "rgba(30,144,255,0.05)",
-                    borderRadius: "16px"
-                }}>
-                    <h3 style={{
-                        fontSize: "18px",
-                        fontWeight: "700",
-                        marginBottom: "16px"
-                    }}>
-                        Write a Review
-                    </h3>
+                <form onSubmit={handleSubmit} className="mb-10 p-6 bg-white/[0.03] border border-white/10 rounded-2xl">
+                    <h3 className="text-white text-lg font-bold mb-6">Write a Review</h3>
 
-                    <div style={{ marginBottom: "16px" }}>
-                        <label style={{
-                            display: "block",
-                            fontWeight: "700",
-                            marginBottom: "8px"
-                        }}>
-                            Rating:
+                    {/* Star Rating */}
+                    <div className="mb-6">
+                        <label className="block text-white text-xs font-bold uppercase tracking-widest mb-3">
+                            Your Rating
                         </label>
-                        <div style={{
-                            display: "flex",
-                            gap: "8px"
-                        }}>
+                        <div className="flex gap-2">
                             {[1, 2, 3, 4, 5].map(r => (
                                 <button
                                     key={r}
                                     type="button"
                                     onClick={() => setRating(r)}
-                                    style={{
-                                        fontSize: "32px",
-                                        background: "none",
-                                        border: "none",
-                                        cursor: "pointer",
-                                        opacity: r <= rating ? 1 : 0.3
-                                    }}
+                                    className={`text-3xl transition-all duration-150 hover:scale-110 ${r <= rating ? "opacity-100" : "opacity-25 grayscale"}`}
                                 >
                                     ⭐
                                 </button>
                             ))}
+                            <span className="ml-3 text-slate-400 text-sm self-center">{rating} / 5</span>
                         </div>
                     </div>
 
-                    <div style={{ marginBottom: "16px" }}>
-                        <label style={{
-                            display: "block",
-                            fontWeight: "700",
-                            marginBottom: "8px"
-                        }}>
-                            Comment (optional):
+                    {/* Comment */}
+                    <div className="mb-6">
+                        <label className="block text-white text-xs font-bold uppercase tracking-widest mb-3">
+                            Comment <span className="text-slate-500 normal-case tracking-normal font-normal">(optional)</span>
                         </label>
                         <textarea
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
-                            rows="4"
-                            placeholder="Share your experience..."
-                            style={{
-                                width: "100%",
-                                padding: "12px",
-                                borderRadius: "8px",
-                                border: "2px solid rgba(30,144,255,0.3)",
-                                fontSize: "15px",
-                                fontFamily: "inherit",
-                                resize: "vertical"
-                            }}
+                            rows={4}
+                            placeholder="Share your experience with this product..."
+                            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 text-sm outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all resize-none font-inherit"
                         />
                     </div>
 
                     <button
                         type="submit"
                         disabled={submitting}
-                        style={{
-                            padding: "12px 24px",
-                            background: submitting ? "#ccc" : "#1E90FF",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            fontWeight: "700",
-                            cursor: submitting ? "not-allowed" : "pointer"
-                        }}
+                        className={`btn-primary ${submitting ? "opacity-60 cursor-not-allowed" : ""}`}
                     >
-                        {submitting ? "Submitting..." : "Submit Review"}
+                        {submitting ? (
+                            <>
+                                <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                Submitting...
+                            </>
+                        ) : (
+                            <>
+                                Submit Review
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </>
+                        )}
                     </button>
 
                     {msg && (
-                        <div style={{
-                            marginTop: "16px",
-                            padding: "12px",
-                            background: msg.includes("✓") ? "#d4edda" : "#f8d7da",
-                            color: msg.includes("✓") ? "#155724" : "#721c24",
-                            borderRadius: "8px",
-                            fontWeight: "700"
-                        }}>
-                            {msg}
+                        <div className={`flex items-center gap-3 mt-4 p-4 rounded-xl text-sm font-medium ${
+                            msg.includes("✓")
+                                ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+                                : "bg-rose-500/10 border border-rose-500/30 text-rose-300"
+                        }`}>
+                            <span>{msg.includes("✓") ? "✅" : "⚠️"}</span> {msg}
                         </div>
                     )}
                 </form>
             )}
 
             {/* Reviews List */}
-            <div style={{ display: "grid", gap: "20px" }}>
-                {reviews && reviews.length > 0 ? (
-                    reviews.map(review => (
-                        <div
-                            key={review.id}
-                            style={{
-                                padding: "20px",
-                                background: "white",
-                                borderRadius: "12px",
-                                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-                            }}
-                        >
-                            <div style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                marginBottom: "12px"
-                            }}>
-                                <div>
-                                    <div style={{ fontSize: "20px", marginBottom: "4px" }}>
-                                        {getStars(review.rating)}
-                                    </div>
-                                    <p style={{
-                                        fontSize: "14px",
-                                        color: "#666",
-                                        fontWeight: "600"
-                                    }}>
-                                        {review.userName}
-                                    </p>
+            <div className="flex flex-col gap-4">
+                {reviews && reviews.length > 0 ? reviews.map(review => (
+                    <div key={review.id} className="group p-6 bg-white/[0.02] border border-white/8 hover:border-white/15 rounded-2xl transition-all duration-200">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                {/* Avatar */}
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
+                                    {review.userName?.charAt(0)?.toUpperCase() || "?"}
                                 </div>
-                                <p style={{
-                                    fontSize: "13px",
-                                    color: "#999"
-                                }}>
-                                    {review.createdAt}
-                                </p>
+                                <div>
+                                    <p className="text-white text-sm font-bold">{review.userName}</p>
+                                    <div className="flex gap-0.5 mt-1">
+                                        {[1,2,3,4,5].map(s => (
+                                            <span key={s} className={`text-sm ${s <= review.rating ? "opacity-100" : "opacity-20 grayscale"}`}>⭐</span>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-                            {review.comment && (
-                                <p style={{
-                                    color: "#444",
-                                    fontSize: "15px",
-                                    lineHeight: "1.6"
-                                }}>
-                                    {review.comment}
-                                </p>
-                            )}
+                            <span className="text-slate-600 text-xs">{review.createdAt}</span>
                         </div>
-                    ))
-                ) : (
-                    <p style={{
-                        textAlign: "center",
-                        color: "#666",
-                        padding: "40px 0"
-                    }}>
-                        No reviews yet. Be the first to review!
-                    </p>
+                        {review.comment && (
+                            <p className="text-slate-400 text-sm leading-relaxed pl-13">
+                                {review.comment}
+                            </p>
+                        )}
+                    </div>
+                )) : (
+                    <div className="flex flex-col items-center py-16 text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-4">💬</div>
+                        <p className="text-white font-bold mb-1">No reviews yet</p>
+                        <p className="text-slate-500 text-sm">Be the first to review this product!</p>
+                    </div>
                 )}
             </div>
         </div>

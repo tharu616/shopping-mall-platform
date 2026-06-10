@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import API from "../api";
+import API from "../api/api";
 import { Link } from "react-router-dom";
 
 export default function Orders() {
@@ -9,16 +9,10 @@ export default function Orders() {
 
     useEffect(() => {
         API.get("/orders")
-            .then(res => {
-                setOrders(res.data);
-                setLoading(false);
-            })
-            .catch(() => {
-                setLoading(false);
-            });
+            .then(res => { setOrders(res.data); setLoading(false); })
+            .catch(() => setLoading(false));
     }, []);
 
-    // Validation helpers
     function validateOrder(order) {
         if (!order || !order.id) return "Invalid order data.";
         if (!order.status) return "Order status is missing.";
@@ -36,272 +30,139 @@ export default function Orders() {
         return errors;
     }
 
-    // Revalidate when orders change
-    useEffect(() => {
-        const errs = validateOrders(orders);
-        setOrdersErrors(errs);
-    }, [orders]);
+    useEffect(() => { setOrdersErrors(validateOrders(orders)); }, [orders]);
 
-    // Helper function to get status color and icon
-    const getStatusStyle = (status) => {
-        const styles = {
-            PENDING: { color: "#FFA500", bg: "rgba(255,165,0,0.1)", icon: "⏳", label: "Pending" },
-            CONFIRMED: { color: "#1E90FF", bg: "rgba(30,144,255,0.1)", icon: "✓", label: "Confirmed" },
-            SHIPPED: { color: "#4B368B", bg: "rgba(75,54,139,0.1)", icon: "🚚", label: "Shipped" },
-            DELIVERED: { color: "#4CAF50", bg: "rgba(76,175,80,0.1)", icon: "✅", label: "Delivered" },
-            CANCELLED: { color: "#dc3545", bg: "rgba(220,53,69,0.1)", icon: "❌", label: "Cancelled" }
-        };
-        return styles[status] || styles.PENDING;
+    const statusConfig = {
+        PENDING:    { color: "text-amber-400",   border: "border-amber-400/40",   bg: "bg-amber-400/10",   dot: "bg-amber-400",   icon: "⏳", label: "Pending"    },
+        CONFIRMED:  { color: "text-blue-400",    border: "border-blue-400/40",    bg: "bg-blue-400/10",    dot: "bg-blue-400",    icon: "✓",  label: "Confirmed"  },
+        SHIPPED:    { color: "text-cyan-400",    border: "border-cyan-400/40",    bg: "bg-cyan-400/10",    dot: "bg-cyan-400",    icon: "🚚", label: "Shipped"    },
+        DELIVERED:  { color: "text-emerald-400", border: "border-emerald-400/40", bg: "bg-emerald-400/10", dot: "bg-emerald-400", icon: "✅", label: "Delivered"  },
+        CANCELLED:  { color: "text-rose-400",    border: "border-rose-400/40",    bg: "bg-rose-400/10",    dot: "bg-rose-400",    icon: "❌", label: "Cancelled"  },
     };
+    const getStatusCfg = (s) => statusConfig[s] || statusConfig.PENDING;
 
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)"
-            }}>
-                <div style={{ color: "white", fontSize: "24px", fontWeight: "600" }}>
-                    Loading orders...
-                </div>
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                <p className="text-slate-400 font-semibold">Loading orders...</p>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (orders.length === 0) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)",
-                position: "relative",
-                overflow: "hidden"
-            }}>
-                <div style={{
-                    position: "absolute",
-                    top: "-10%",
-                    right: "-5%",
-                    width: "500px",
-                    height: "500px",
-                    background: "radial-gradient(circle, rgba(255,165,0,0.2), transparent 70%)",
-                    borderRadius: "50%",
-                    filter: "blur(80px)"
-                }} />
-
-                <div style={{
-                    background: "rgba(255, 255, 255, 0.15)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255, 255, 255, 0.3)",
-                    borderRadius: "24px",
-                    padding: "60px 80px",
-                    textAlign: "center",
-                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-                    position: "relative",
-                    zIndex: 1
-                }}>
-                    <div style={{ fontSize: "120px", marginBottom: "24px" }}>📦</div>
-                    <h2 style={{ fontSize: "32px", color: "white", marginBottom: "16px", fontWeight: "800" }}>
-                        No Orders Yet
-                    </h2>
-                    <p style={{ fontSize: "18px", color: "rgba(255,255,255,0.8)", marginBottom: "30px" }}>
-                        You haven't placed any orders yet
-                    </p>
-                    <Link to="/products">
-                        <button style={{
-                            padding: "16px 40px",
-                            background: "linear-gradient(135deg, #FFA500, #FF8C00)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "12px",
-                            fontSize: "18px",
-                            fontWeight: "700",
-                            cursor: "pointer",
-                            boxShadow: "0 8px 24px rgba(255,165,0,0.4)",
-                            transition: "all 0.3s"
-                        }}>
-                            Start Shopping
-                        </button>
-                    </Link>
-                </div>
+    if (orders.length === 0) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a] px-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-amber-500/10 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-violet-600/10 blur-[100px] pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+            <div className="relative z-10 glass-card max-w-md w-full text-center py-14 px-10">
+                <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-5xl mx-auto mb-6">📦</div>
+                <h2 className="text-white text-3xl font-black mb-3">No Orders Yet</h2>
+                <p className="text-slate-400 text-sm mb-8">You haven't placed any orders yet</p>
+                <Link to="/products">
+                    <button className="btn-primary w-full justify-center py-4 text-base">
+                        Start Shopping
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </button>
+                </Link>
             </div>
-        );
-    }
+        </div>
+    );
+
+    const totalSpent = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const pendingCount = orders.filter(o => o.status === "PENDING").length;
+    const deliveredCount = orders.filter(o => o.status === "DELIVERED").length;
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
-            padding: "60px 20px"
-        }}>
-            <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div className="min-h-screen bg-[#0a0a1a] px-4 py-16 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-violet-600/8 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px] pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+
+            <div className="relative z-10 max-w-5xl mx-auto">
+
                 {/* Header */}
-                <div style={{ marginBottom: "40px" }}>
-                    <h1 style={{
-                        fontSize: "42px",
-                        fontWeight: "800",
-                        color: "#1A1A2E",
-                        marginBottom: "8px"
-                    }}>
-                        Your Orders
-                    </h1>
-                    <p style={{ color: "#666", fontSize: "16px" }}>
-                        Track and manage your orders
-                    </p>
+                <div className="mb-12">
+                    <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">Account</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight">Your Orders</h1>
+                    <p className="text-slate-400 text-sm mt-2">Track and manage your orders</p>
                 </div>
 
-                {/* Orders List */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                {/* Summary stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+                    {[
+                        { label: "Total Orders",   value: orders.length,               grad: "from-blue-500 to-violet-600"   },
+                        { label: "Pending",        value: pendingCount,                grad: "from-amber-400 to-orange-500"  },
+                        { label: "Delivered",      value: deliveredCount,              grad: "from-emerald-500 to-teal-600"  },
+                        { label: "Total Spent",    value: `$${totalSpent.toFixed(2)}`, grad: "from-rose-500 to-pink-600"    },
+                    ].map(stat => (
+                        <div key={stat.label} className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 text-center">
+                            <p className={`text-2xl font-black bg-gradient-to-br ${stat.grad} bg-clip-text text-transparent`}>{stat.value}</p>
+                            <p className="text-slate-500 text-xs font-semibold mt-1">{stat.label}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Orders list */}
+                <div className="flex flex-col gap-4">
                     {orders.map(order => {
-                        const statusStyle = getStatusStyle(order.status);
+                        const sc = getStatusCfg(order.status);
                         const orderErr = ordersErrors[order.id];
 
                         return (
-                            <div key={order.id} style={{
-                                background: "rgba(255, 255, 255, 0.8)",
-                                backdropFilter: "blur(20px)",
-                                WebkitBackdropFilter: "blur(20px)",
-                                border: orderErr ? "2px solid #dc3545" : "1px solid rgba(255,255,255,0.3)",
-                                borderRadius: "20px",
-                                padding: "30px",
-                                boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                                transition: "all 0.3s ease",
-                                cursor: "pointer"
-                            }}
-                                 onMouseEnter={(e) => {
-                                     e.currentTarget.style.transform = "translateY(-5px)";
-                                     e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.15)";
-                                 }}
-                                 onMouseLeave={(e) => {
-                                     e.currentTarget.style.transform = "translateY(0)";
-                                     e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.1)";
-                                 }}
+                            <div
+                                key={order.id}
+                                className={`group bg-white/[0.03] border rounded-2xl p-5 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-200 ${
+                                    orderErr ? "border-rose-500/40 bg-rose-500/[0.03]" : "border-white/10 hover:border-white/20"
+                                }`}
                             >
-                                <div style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "auto 1fr auto auto",
-                                    gap: "24px",
-                                    alignItems: "center"
-                                }}>
-                                    {/* Order Icon */}
-                                    <div style={{
-                                        width: "70px",
-                                        height: "70px",
-                                        background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                        borderRadius: "16px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        fontSize: "32px",
-                                        boxShadow: "0 4px 15px rgba(30,144,255,0.3)"
-                                    }}>
+                                <div className="flex flex-wrap items-center gap-5">
+
+                                    {/* Icon */}
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-2xl flex-shrink-0 shadow-lg">
                                         📦
                                     </div>
 
-                                    {/* Order Info */}
-                                    <div>
-                                        <div style={{
-                                            fontSize: "20px",
-                                            fontWeight: "800",
-                                            color: "#1A1A2E",
-                                            marginBottom: "8px"
-                                        }}>
-                                            Order #{order.id}
-                                        </div>
-                                        <div style={{
-                                            display: "flex",
-                                            gap: "20px",
-                                            fontSize: "14px",
-                                            color: "#666"
-                                        }}>
-                                            <span>
-                                                <strong>{order.items?.length || 0}</strong> item{order.items?.length !== 1 ? 's' : ''}
-                                            </span>
-                                            {order.createdAt && (
-                                                <span>
-                                                    Placed: {new Date(order.createdAt).toLocaleDateString()}
-                                                </span>
-                                            )}
-                                            {order.total && (
-                                                <span style={{
-                                                    fontWeight: "700",
-                                                    background: "linear-gradient(135deg, #FFA500, #FF6B6B)",
-                                                    WebkitBackgroundClip: "text",
-                                                    WebkitTextFillColor: "transparent"
-                                                }}>
-                                                    ${order.total.toFixed(2)}
-                                                </span>
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-white font-black text-lg mb-1.5">Order #{order.id}</p>
+                                        <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                                            <span><strong className="text-slate-400">{order.items?.length || 0}</strong> item{order.items?.length !== 1 ? "s" : ""}</span>
+                                            {order.createdAt && <span>📅 {new Date(order.createdAt).toLocaleDateString()}</span>}
+                                            {order.total != null && (
+                                                <span className="font-black gradient-text-price text-sm">${order.total.toFixed(2)}</span>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Status Badge */}
-                                    <div style={{
-                                        padding: "12px 24px",
-                                        background: statusStyle.bg,
-                                        borderRadius: "12px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        border: `2px solid ${statusStyle.color}`
-                                    }}>
-                                        <span style={{ fontSize: "20px" }}>{statusStyle.icon}</span>
-                                        <span style={{
-                                            fontWeight: "700",
-                                            color: statusStyle.color,
-                                            fontSize: "14px"
-                                        }}>
-                                            {statusStyle.label}
-                                        </span>
+                                    {/* Status */}
+                                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border flex-shrink-0 ${sc.bg} ${sc.border}`}>
+                                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${sc.dot} ${order.status === "PENDING" ? "animate-pulse" : ""}`} />
+                                        <span className={`text-xs font-black ${sc.color}`}>{sc.icon} {sc.label}</span>
                                     </div>
 
-                                    {/* View Details Button */}
-                                    <Link to={`/orders/${order.id}`} style={{ textDecoration: "none" }}>
+                                    {/* View */}
+                                    <Link to={`/orders/${order.id}`} className="no-underline flex-shrink-0">
                                         <button
                                             disabled={!!orderErr}
-                                            style={{
-                                                padding: "12px 24px",
-                                                background: orderErr
-                                                    ? "#ccc"
-                                                    : "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                                color: "white",
-                                                border: "none",
-                                                borderRadius: "12px",
-                                                fontSize: "14px",
-                                                fontWeight: "700",
-                                                cursor: orderErr ? "not-allowed" : "pointer",
-                                                boxShadow: orderErr ? "none" : "0 4px 15px rgba(30,144,255,0.3)",
-                                                transition: "all 0.3s",
-                                                whiteSpace: "nowrap"
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (!orderErr) {
-                                                    e.target.style.transform = "scale(1.05)";
-                                                    e.target.style.boxShadow = "0 6px 20px rgba(30,144,255,0.4)";
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!orderErr) {
-                                                    e.target.style.transform = "scale(1)";
-                                                    e.target.style.boxShadow = "0 4px 15px rgba(30,144,255,0.3)";
-                                                }
-                                            }}
                                             title={orderErr || "View order details"}
+                                            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                                                orderErr
+                                                    ? "bg-white/5 border border-white/8 text-slate-600 cursor-not-allowed"
+                                                    : "bg-blue-500/10 border border-blue-500/25 text-blue-400 hover:bg-blue-500/20"
+                                            }`}
                                         >
-                                            View Details →
+                                            Details →
                                         </button>
                                     </Link>
                                 </div>
 
-                                {/* Inline order error */}
+                                {/* Inline error */}
                                 {orderErr && (
-                                    <p style={{ color: "#dc3545", fontSize: 14, marginTop: 16 }}>
-                                        {orderErr}
+                                    <p className="text-rose-400 text-xs font-semibold mt-3 flex items-center gap-1">
+                                        <span>⚠️</span> {orderErr}
                                     </p>
                                 )}
                             </div>
@@ -309,70 +170,6 @@ export default function Orders() {
                     })}
                 </div>
 
-                {/* Summary Card */}
-                <div style={{
-                    marginTop: "40px",
-                    background: "linear-gradient(135deg, rgba(30,144,255,0.1), rgba(75,54,139,0.1))",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "2px solid rgba(30,144,255,0.3)",
-                    borderRadius: "20px",
-                    padding: "30px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
-                }}>
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                        gap: "30px",
-                        textAlign: "center"
-                    }}>
-                        <div>
-                            <div style={{
-                                fontSize: "36px",
-                                fontWeight: "800",
-                                background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                marginBottom: "8px"
-                            }}>
-                                {orders.length}
-                            </div>
-                            <div style={{ color: "#666", fontSize: "14px", fontWeight: "600" }}>
-                                Total Orders
-                            </div>
-                        </div>
-
-                        <div>
-                            <div style={{
-                                fontSize: "36px",
-                                fontWeight: "800",
-                                background: "linear-gradient(135deg, #FFA500, #FF6B6B)",
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                marginBottom: "8px"
-                            }}>
-                                {orders.filter(o => o.status === "PENDING").length}
-                            </div>
-                            <div style={{ color: "#666", fontSize: "14px", fontWeight: "600" }}>
-                                Pending
-                            </div>
-                        </div>
-
-                        <div>
-                            <div style={{
-                                fontSize: "36px",
-                                fontWeight: "800",
-                                color: "#4CAF50",
-                                marginBottom: "8px"
-                            }}>
-                                {orders.filter(o => o.status === "DELIVERED").length}
-                            </div>
-                            <div style={{ color: "#666", fontSize: "14px", fontWeight: "600" }}>
-                                Delivered
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

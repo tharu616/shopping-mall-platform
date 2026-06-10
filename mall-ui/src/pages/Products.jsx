@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import API from "../api";
+import API from "../api/api";
 import { useAuth } from "../AuthContext";
 
 export default function Products() {
@@ -19,151 +19,72 @@ export default function Products() {
         product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)"
-            }}>
-                <div style={{
-                    color: "white",
-                    fontSize: "24px",
-                    fontWeight: "600"
-                }}>
-                    Loading products...
-                </div>
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                <p className="text-slate-400 font-semibold">Loading products...</p>
             </div>
-        );
-    }
+        </div>
+    );
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
-        }}>
-            {/* Header Section with Gradient */}
-            <div style={{
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 50%, #2E2566 100%)",
-                padding: "60px 40px",
-                position: "relative",
-                overflow: "hidden"
-            }}>
-                {/* Animated Background Circle */}
-                <div style={{
-                    position: "absolute",
-                    top: "-20%",
-                    right: "-5%",
-                    width: "400px",
-                    height: "400px",
-                    background: "radial-gradient(circle, rgba(255,165,0,0.2), transparent 70%)",
-                    borderRadius: "50%",
-                    filter: "blur(60px)"
-                }} />
+        <div className="min-h-screen bg-[#0a0a1a]">
 
-                <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
-                    <h1 style={{
-                        fontSize: "48px",
-                        fontWeight: "800",
-                        color: "white",
-                        marginBottom: "16px",
-                        letterSpacing: "-1px"
-                    }}>
-                        Our Products
-                    </h1>
-                    <p style={{
-                        fontSize: "18px",
-                        color: "rgba(255,255,255,0.9)",
-                        marginBottom: "30px"
-                    }}>
+            {/* ── Hero Header ── */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#0d0d2b] via-[#1a1040] to-[#0a0a1a] py-20 px-6">
+                <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-amber-500/10 blur-[100px] pointer-events-none" />
+                <div className="absolute bottom-[-20%] left-[-5%] w-[350px] h-[350px] rounded-full bg-violet-600/10 blur-[100px] pointer-events-none" />
+                <div className="absolute inset-0 grid-overlay pointer-events-none" />
+
+                <div className="relative z-10 max-w-7xl mx-auto">
+                    <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">Catalogue</p>
+                    <h1 className="text-5xl lg:text-6xl font-black text-white tracking-tight mb-4">Our Products</h1>
+                    <p className="text-slate-400 text-lg mb-10 max-w-xl">
                         Discover our curated collection of premium products
                     </p>
 
-                    {/* Search Bar */}
-                    <div style={{
-                        maxWidth: "600px",
-                        position: "relative"
-                    }}>
+                    {/* Search */}
+                    <div className="relative max-w-xl">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg">🔍</span>
                         <input
                             type="text"
-                            placeholder="🔍 Search products..."
+                            placeholder="Search products..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "16px 24px",
-                                borderRadius: "50px",
-                                border: "1px solid rgba(255,255,255,0.3)",
-                                background: "rgba(255,255,255,0.15)",
-                                backdropFilter: "blur(10px)",
-                                color: "white",
-                                fontSize: "16px",
-                                outline: "none",
-                                transition: "all 0.3s"
-                            }}
+                            className="w-full pl-12 pr-6 py-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md text-white placeholder-slate-500 text-sm outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all"
                         />
                     </div>
                 </div>
             </div>
 
-            {/* Products Grid */}
-            <div style={{
-                maxWidth: "1200px",
-                margin: "0 auto",
-                padding: "60px 40px"
-            }}>
-                {/* Add Product Button (for Admin/Vendor) */}
-                {(role === "ADMIN" || role === "VENDOR") && (
-                    <div style={{ marginBottom: "30px" }}>
+            {/* ── Content ── */}
+            <div className="max-w-7xl mx-auto px-6 lg:px-16 py-14">
+
+                {/* Toolbar */}
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
+                    <p className="text-slate-400 text-sm">
+                        Showing <span className="text-white font-bold">{filteredProducts.length}</span> product{filteredProducts.length !== 1 ? "s" : ""}
+                    </p>
+                    {(role === "ADMIN" || role === "VENDOR") && (
                         <Link to="/products/create">
-                            <button style={{
-                                padding: "14px 32px",
-                                background: "linear-gradient(135deg, #FFA500, #FF8C00)",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "12px",
-                                fontSize: "16px",
-                                fontWeight: "700",
-                                cursor: "pointer",
-                                boxShadow: "0 8px 20px rgba(255,165,0,0.3)",
-                                transition: "all 0.3s"
-                            }}>
-                                + Add New Product
+                            <button className="btn-primary">
+                                <span className="text-lg leading-none">+</span>
+                                Add New Product
                             </button>
                         </Link>
-                    </div>
-                )}
-
-                {/* Products Count */}
-                <div style={{
-                    marginBottom: "30px",
-                    color: "#666",
-                    fontSize: "16px"
-                }}>
-                    Showing <strong>{filteredProducts.length}</strong> product{filteredProducts.length !== 1 ? 's' : ''}
+                    )}
                 </div>
 
-                {/* Products Grid */}
+                {/* Empty state */}
                 {filteredProducts.length === 0 ? (
-                    <div style={{
-                        textAlign: "center",
-                        padding: "60px 20px",
-                        color: "#999"
-                    }}>
-                        <div style={{ fontSize: "64px", marginBottom: "20px" }}>📦</div>
-                        <h3 style={{ fontSize: "24px", color: "#666", marginBottom: "10px" }}>
-                            No products found
-                        </h3>
-                        <p>Try adjusting your search terms</p>
+                    <div className="flex flex-col items-center justify-center py-28 text-center">
+                        <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-5xl mb-6">📦</div>
+                        <h3 className="text-white text-2xl font-bold mb-2">No products found</h3>
+                        <p className="text-slate-500 text-sm">Try adjusting your search terms</p>
                     </div>
                 ) : (
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                        gap: "30px"
-                    }}>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredProducts.map(product => (
                             <ProductCard key={product.id} product={product} />
                         ))}
@@ -174,143 +95,49 @@ export default function Products() {
     );
 }
 
-// ✨ Product Card Component with IMAGE DISPLAY
 function ProductCard({ product }) {
     return (
-        <Link to={`/products/${product.id}`} style={{ textDecoration: "none" }}>
-            <div style={{
-                background: "white",
-                borderRadius: "20px",
-                overflow: "hidden",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                transition: "all 0.4s ease",
-                cursor: "pointer",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column"
-            }}
-                 onMouseEnter={(e) => {
-                     e.currentTarget.style.transform = "translateY(-10px)";
-                     e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.15)";
-                 }}
-                 onMouseLeave={(e) => {
-                     e.currentTarget.style.transform = "translateY(0)";
-                     e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.08)";
-                 }}
-            >
-                {/* ✨ Product Image - NEW! */}
-                <div style={{
-                    height: "240px",
-                    position: "relative",
-                    overflow: "hidden"
-                }}>
+        <Link to={`/products/${product.id}`}>
+            <div className="group bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 hover:-translate-y-2 hover:shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer flex flex-col h-full">
+
+                {/* Image */}
+                <div className="relative h-52 overflow-hidden">
                     {product.imageUrl ? (
                         <img
                             src={`http://localhost:8081${product.imageUrl}?t=${new Date().getTime()}`}
                             alt={product.name}
-                            style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover"
-                            }}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                     ) : (
-                        <div style={{
-                            width: "100%",
-                            height: "100%",
-                            background: "linear-gradient(135deg, #f5f7fa 0%, #e8ebf0 100%)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "80px"
-                        }}>
+                        <div className="w-full h-full bg-gradient-to-br from-[#1a1040] to-[#0d0d2b] flex items-center justify-center text-6xl">
                             📦
                         </div>
                     )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                    {/* Stock Badge */}
-                    {product.stock <= 10 && product.stock > 0 ? (
-                        <div style={{
-                            position: "absolute",
-                            top: "16px",
-                            right: "16px",
-                            background: "#FFA500",
-                            color: "white",
-                            padding: "6px 12px",
-                            borderRadius: "20px",
-                            fontSize: "12px",
-                            fontWeight: "700",
-                            boxShadow: "0 4px 10px rgba(255,165,0,0.3)"
-                        }}>
+                    {product.stock <= 10 && product.stock > 0 && (
+                        <span className="absolute top-3 right-3 px-3 py-1 bg-amber-400/90 text-black text-xs font-black rounded-full backdrop-blur-sm">
                             Low Stock
-                        </div>
-                    ) : product.stock === 0 ? (
-                        <div style={{
-                            position: "absolute",
-                            top: "16px",
-                            right: "16px",
-                            background: "#dc3545",
-                            color: "white",
-                            padding: "6px 12px",
-                            borderRadius: "20px",
-                            fontSize: "12px",
-                            fontWeight: "700"
-                        }}>
+                        </span>
+                    )}
+                    {product.stock === 0 && (
+                        <span className="absolute top-3 right-3 px-3 py-1 bg-rose-500/90 text-white text-xs font-black rounded-full backdrop-blur-sm">
                             Out of Stock
-                        </div>
-                    ) : null}
+                        </span>
+                    )}
                 </div>
 
-                {/* Product Info */}
-                <div style={{ padding: "24px", flex: 1, display: "flex", flexDirection: "column" }}>
-                    <h3 style={{
-                        fontSize: "18px",
-                        fontWeight: "700",
-                        color: "#1A1A2E",
-                        marginBottom: "8px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap"
-                    }}>
-                        {product.name}
-                    </h3>
-
-                    <p style={{
-                        color: "#666",
-                        fontSize: "14px",
-                        marginBottom: "16px",
-                        lineHeight: "1.5",
-                        height: "42px",
-                        overflow: "hidden",
-                        flex: 1
-                    }}>
-                        {product.description}
-                    </p>
-
-                    <div style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginTop: "auto"
-                    }}>
-                        <span style={{
-                            fontSize: "28px",
-                            fontWeight: "800",
-                            background: "linear-gradient(135deg, #FFA500, #FF6B6B)",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent"
-                        }}>
-                            ${product.price}
-                        </span>
-
-                        <span style={{
-                            fontSize: "13px",
-                            color: product.stock > 0 ? "#4CAF50" : "#dc3545",
-                            fontWeight: "600",
-                            padding: "6px 14px",
-                            background: product.stock > 0 ? "rgba(76,175,80,0.1)" : "rgba(220,53,69,0.1)",
-                            borderRadius: "20px"
-                        }}>
+                {/* Info */}
+                <div className="p-5 flex flex-col flex-1">
+                    <h3 className="text-white font-bold text-base truncate mb-2">{product.name}</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 flex-1 mb-4">{product.description}</p>
+                    <div className="flex items-center justify-between mt-auto">
+                        <span className="text-2xl font-black gradient-text-price">${product.price}</span>
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                            product.stock > 0
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                        }`}>
                             {product.stock > 0 ? `${product.stock} left` : "Sold out"}
                         </span>
                     </div>

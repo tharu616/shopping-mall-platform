@@ -1,70 +1,45 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import API from "../api";
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import API from "../api/api";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export default function PaymentHistory() {
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filters, setFilters] = useState({
-        status: "",
-        startDate: "",
-        endDate: "",
-        userEmail: ""
-    });
+    const [filters, setFilters] = useState({ status: "", startDate: "", endDate: "", userEmail: "" });
     const [summary, setSummary] = useState({
-        total: 0,
-        verified: 0,
-        pending: 0,
-        rejected: 0,
-        totalAmount: 0,
-        verifiedAmount: 0
+        total: 0, verified: 0, pending: 0, rejected: 0, totalAmount: 0, verifiedAmount: 0
     });
 
-
-    useEffect(() => {
-        fetchPaymentHistory();
-    }, []);
+    useEffect(() => { fetchPaymentHistory(); }, []);
 
     function fetchPaymentHistory() {
         setLoading(true);
         const params = new URLSearchParams();
-        if (filters.status) params.append("status", filters.status);
+        if (filters.status)    params.append("status", filters.status);
         if (filters.startDate) params.append("startDate", filters.startDate);
-        if (filters.endDate) params.append("endDate", filters.endDate);
+        if (filters.endDate)   params.append("endDate", filters.endDate);
         if (filters.userEmail) params.append("userEmail", filters.userEmail);
-
         API.get(`/payments/history?${params.toString()}`)
-            .then(res => {
-                setPayments(res.data);
-                calculateSummary(res.data);
-            })
+            .then(res => { setPayments(res.data); calculateSummary(res.data); })
             .catch(err => console.error("Failed to fetch payment history", err))
             .finally(() => setLoading(false));
     }
 
     function calculateSummary(data) {
-        const total = data.length;
-        const verified = data.filter(p => p.status === "VERIFIED").length;
-        const pending = data.filter(p => p.status === "PENDING").length;
-        const rejected = data.filter(p => p.status === "REJECTED").length;
-        const totalAmount = data.reduce((sum, p) => sum + p.amount, 0);
-        const verifiedAmount = data
-            .filter(p => p.status === "VERIFIED")
-            .reduce((sum, p) => sum + p.amount, 0);
-
-        setSummary({ total, verified, pending, rejected, totalAmount, verifiedAmount });
+        setSummary({
+            total: data.length,
+            verified: data.filter(p => p.status === "VERIFIED").length,
+            pending:  data.filter(p => p.status === "PENDING").length,
+            rejected: data.filter(p => p.status === "REJECTED").length,
+            totalAmount:    data.reduce((sum, p) => sum + p.amount, 0),
+            verifiedAmount: data.filter(p => p.status === "VERIFIED").reduce((sum, p) => sum + p.amount, 0),
+        });
     }
 
-    const handleFilterChange = (e) => {
-        setFilters({ ...filters, [e.target.name]: e.target.value });
-    };
-
-    const handleApplyFilters = () => {
-        fetchPaymentHistory();
-    };
-
+    const handleFilterChange = (e) => setFilters({ ...filters, [e.target.name]: e.target.value });
+    const handleApplyFilters = () => fetchPaymentHistory();
     const handleClearFilters = () => {
         setFilters({ status: "", startDate: "", endDate: "", userEmail: "" });
         setTimeout(() => fetchPaymentHistory(), 100);
@@ -74,308 +49,167 @@ export default function PaymentHistory() {
         const headers = ["Payment ID", "Order ID", "User Email", "Amount", "Status", "Reference"];
         const csvData = [
             headers.join(","),
-            ...payments.map(p =>
-                `${p.id},${p.orderId},${p.userEmail},$${p.amount},${p.status},${p.reference || "N/A"}`
-            )
+            ...payments.map(p => `${p.id},${p.orderId},${p.userEmail},$${p.amount},${p.status},${p.reference || "N/A"}`)
         ].join("\n");
-
         const blob = new Blob([csvData], { type: "text/csv" });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `payment-history-${new Date().toISOString().split('T')[0]}.csv`;
+        link.download = `payment-history-${new Date().toISOString().split("T")[0]}.csv`;
         link.click();
     };
 
     const downloadPDF = () => {
-        // For PDF generation, you can use jsPDF library
         alert("PDF generation feature coming soon! For now, use CSV export.");
     };
 
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
-            }}>
-                <div style={{ color: "#666", fontSize: "20px", fontWeight: "700" }}>
-                    ⏳ Loading payment history...
-                </div>
+    const statusConfig = {
+        VERIFIED: { classes: "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" },
+        PENDING:  { classes: "bg-amber-400/10  border-amber-400/25  text-amber-400"    },
+        REJECTED: { classes: "bg-rose-500/10   border-rose-500/25   text-rose-400"     },
+    };
+    const getStatusCls = (s) => (statusConfig[s] || { classes: "bg-white/5 border-white/10 text-slate-400" }).classes;
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                <p className="text-slate-400 font-semibold">Loading payment history...</p>
             </div>
-        );
-    }
+        </div>
+    );
+
+    const inputClass = "px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 text-sm outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all [color-scheme:dark]";
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
-            padding: "60px 20px"
-        }}>
-            <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+        <div className="min-h-screen bg-[#0a0a1a] px-4 py-16 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-violet-600/8 blur-[130px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-amber-500/8 blur-[120px] pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+
+            <div className="relative z-10 max-w-7xl mx-auto">
+
                 {/* Header */}
-                <div style={{ marginBottom: "30px" }}>
-                    <h1 style={{
-                        fontSize: "36px",
-                        fontWeight: "800",
-                        color: "#1A1A2E",
-                        marginBottom: "8px"
-                    }}>
-                        📊 Payment History & Reports
-                    </h1>
-                    <p style={{ color: "#666", fontSize: "16px" }}>
-                        View, filter, and export payment transaction history
-                    </p>
+                <div className="mb-12">
+                    <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">Admin · Finance</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight">Payment History</h1>
+                    <p className="text-slate-400 text-sm mt-2">View, filter, and export payment transaction history</p>
                 </div>
 
-                {/* Summary Cards */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                    gap: "16px",
-                    marginBottom: "24px"
-                }}>
-                    <SummaryCard label="Total Payments" value={summary.total} color="#1E90FF" />
-                    <SummaryCard label="Verified" value={summary.verified} color="#4CAF50" />
-                    <SummaryCard label="Pending" value={summary.pending} color="#FFA500" />
-                    <SummaryCard label="Rejected" value={summary.rejected} color="#dc3545" />
-                    <SummaryCard label="Total Amount" value={`$${summary.totalAmount.toFixed(2)}`} color="#9C27B0" />
-                    <SummaryCard label="Verified Amount" value={`$${summary.verifiedAmount.toFixed(2)}`} color="#4CAF50" />
+                {/* Summary cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+                    {[
+                        { label: "Total",           value: summary.total,                           grad: "from-blue-500 to-violet-600"   },
+                        { label: "Verified",        value: summary.verified,                        grad: "from-emerald-500 to-teal-600"  },
+                        { label: "Pending",         value: summary.pending,                         grad: "from-amber-400 to-orange-500"  },
+                        { label: "Rejected",        value: summary.rejected,                        grad: "from-rose-500 to-pink-600"     },
+                        { label: "Total Amount",    value: `$${summary.totalAmount.toFixed(2)}`,    grad: "from-violet-500 to-purple-700" },
+                        { label: "Verified Amount", value: `$${summary.verifiedAmount.toFixed(2)}`, grad: "from-emerald-500 to-teal-600"  },
+                    ].map(stat => (
+                        <div key={stat.label} className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 text-center">
+                            <p className={`text-xl font-black bg-gradient-to-br ${stat.grad} bg-clip-text text-transparent`}>{stat.value}</p>
+                            <p className="text-slate-500 text-xs font-semibold mt-1">{stat.label}</p>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Filters */}
-                <div style={{
-                    background: "white",
-                    borderRadius: "16px",
-                    padding: "24px",
-                    marginBottom: "24px",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.1)"
-                }}>
-                    <h3 style={{ marginBottom: "16px", fontWeight: "700" }}>Filters</h3>
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                        gap: "16px",
-                        marginBottom: "16px"
-                    }}>
-                        <input
-                            type="text"
-                            name="userEmail"
-                            placeholder="Search by email"
-                            value={filters.userEmail}
-                            onChange={handleFilterChange}
-                            style={{
-                                padding: "12px",
-                                borderRadius: "8px",
-                                border: "1px solid #ddd",
-                                fontSize: "14px"
-                            }}
-                        />
-                        <select
-                            name="status"
-                            value={filters.status}
-                            onChange={handleFilterChange}
-                            style={{
-                                padding: "12px",
-                                borderRadius: "8px",
-                                border: "1px solid #ddd",
-                                fontSize: "14px"
-                            }}
-                        >
+                <div className="glass-card mb-8">
+                    <h3 className="text-white text-sm font-black uppercase tracking-widest mb-5 flex items-center gap-2">
+                        <span>🔍</span> Filters
+                    </h3>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+                        <input type="text" name="userEmail" placeholder="Search by email"
+                            value={filters.userEmail} onChange={handleFilterChange} className={inputClass} />
+                        <select name="status" value={filters.status} onChange={handleFilterChange}
+                            className={inputClass}>
                             <option value="">All Status</option>
                             <option value="PENDING">Pending</option>
                             <option value="VERIFIED">Verified</option>
                             <option value="REJECTED">Rejected</option>
                         </select>
-                        <input
-                            type="date"
-                            name="startDate"
-                            value={filters.startDate}
-                            onChange={handleFilterChange}
-                            style={{
-                                padding: "12px",
-                                borderRadius: "8px",
-                                border: "1px solid #ddd",
-                                fontSize: "14px"
-                            }}
-                        />
-                        <input
-                            type="date"
-                            name="endDate"
-                            value={filters.endDate}
-                            onChange={handleFilterChange}
-                            style={{
-                                padding: "12px",
-                                borderRadius: "8px",
-                                border: "1px solid #ddd",
-                                fontSize: "14px"
-                            }}
-                        />
+                        <input type="date" name="startDate" value={filters.startDate}
+                            onChange={handleFilterChange} className={inputClass} />
+                        <input type="date" name="endDate" value={filters.endDate}
+                            onChange={handleFilterChange} className={inputClass} />
                     </div>
-                    <div style={{ display: "flex", gap: "12px" }}>
-                        <button
-                            onClick={handleApplyFilters}
-                            style={{
-                                padding: "12px 24px",
-                                background: "#1E90FF",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                                fontWeight: "700"
-                            }}
-                        >
+                    <div className="flex gap-3">
+                        <button onClick={handleApplyFilters} className="btn-primary py-2.5 px-6 text-sm">
                             Apply Filters
                         </button>
-                        <button
-                            onClick={handleClearFilters}
-                            style={{
-                                padding: "12px 24px",
-                                background: "#6c757d",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                                fontWeight: "700"
-                            }}
-                        >
+                        <button onClick={handleClearFilters} className="btn-ghost py-2.5 px-6 text-sm">
                             Clear
                         </button>
                     </div>
                 </div>
 
-                {/* Export Buttons */}
-                <div style={{
-                    display: "flex",
-                    gap: "12px",
-                    marginBottom: "24px"
-                }}>
-                    <button
-                        onClick={downloadCSV}
-                        style={{
-                            padding: "12px 24px",
-                            background: "linear-gradient(135deg, #4CAF50, #45a049)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            fontWeight: "700",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px"
-                        }}
-                    >
-                        📥 Export CSV
+                {/* Export */}
+                <div className="flex gap-3 mb-6">
+                    <button onClick={downloadCSV}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/20 text-sm font-bold transition-all">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Export CSV
                     </button>
-                    <button
-                        onClick={downloadPDF}
-                        style={{
-                            padding: "12px 24px",
-                            background: "linear-gradient(135deg, #dc3545, #c82333)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            fontWeight: "700",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px"
-                        }}
-                    >
-                        📄 Export PDF
+                    <button onClick={downloadPDF}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:bg-rose-500/20 text-sm font-bold transition-all">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export PDF
                     </button>
                 </div>
 
-                {/* Payment Table */}
-                <div style={{
-                    background: "white",
-                    borderRadius: "16px",
-                    padding: "24px",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-                    overflowX: "auto"
-                }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead>
-                        <tr style={{ borderBottom: "2px solid #eee" }}>
-                            <th style={{ padding: "16px", textAlign: "left", fontWeight: "700" }}>ID</th>
-                            <th style={{ padding: "16px", textAlign: "left", fontWeight: "700" }}>Order ID</th>
-                            <th style={{ padding: "16px", textAlign: "left", fontWeight: "700" }}>User Email</th>
-                            <th style={{ padding: "16px", textAlign: "right", fontWeight: "700" }}>Amount</th>
-                            <th style={{ padding: "16px", textAlign: "center", fontWeight: "700" }}>Status</th>
-                            <th style={{ padding: "16px", textAlign: "left", fontWeight: "700" }}>Reference</th>
-                            <th style={{ padding: "16px", textAlign: "center", fontWeight: "700" }}>Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {payments.map(payment => (
-                            <tr key={payment.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                                <td style={{ padding: "16px" }}>{payment.id}</td>
-                                <td style={{ padding: "16px" }}>
-                                    <Link to={`/orders/${payment.orderId}`} style={{ color: "#1E90FF", textDecoration: "none" }}>
-                                        #{payment.orderId}
-                                    </Link>
-                                </td>
-                                <td style={{ padding: "16px" }}>{payment.userEmail}</td>
-                                <td style={{ padding: "16px", textAlign: "right", fontWeight: "700" }}>
-                                    ${payment.amount.toFixed(2)}
-                                </td>
-                                <td style={{ padding: "16px", textAlign: "center" }}>
-                                        <span style={{
-                                            padding: "6px 12px",
-                                            borderRadius: "8px",
-                                            fontSize: "12px",
-                                            fontWeight: "700",
-                                            background: payment.status === "VERIFIED" ? "#d4edda" :
-                                                payment.status === "PENDING" ? "#fff3cd" : "#f8d7da",
-                                            color: payment.status === "VERIFIED" ? "#155724" :
-                                                payment.status === "PENDING" ? "#856404" : "#721c24"
-                                        }}>
-                                            {payment.status}
-                                        </span>
-                                </td>
-                                <td style={{ padding: "16px" }}>{payment.reference || "N/A"}</td>
-                                <td style={{ padding: "16px", textAlign: "center" }}>
-                                    <Link
-                                        to={`/payments/${payment.id}`}
-                                        style={{
-                                            padding: "8px 16px",
-                                            background: "#1E90FF",
-                                            color: "white",
-                                            textDecoration: "none",
-                                            borderRadius: "6px",
-                                            fontSize: "14px",
-                                            fontWeight: "600"
-                                        }}
-                                    >
-                                        View
-                                    </Link>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                    {payments.length === 0 && (
-                        <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-                            No payment records found
+                {/* Table */}
+                <div className="glass-card overflow-x-auto">
+                    <div className="min-w-[700px]">
+
+                        {/* Table header */}
+                        <div className="grid grid-cols-[80px_90px_1fr_110px_120px_130px_90px] gap-3 px-4 pb-4 border-b border-white/8">
+                            {["ID", "Order", "User Email", "Amount", "Status", "Reference", ""].map((h, i) => (
+                                <p key={i} className={`text-slate-600 text-xs font-bold uppercase tracking-widest ${i === 3 ? "text-right" : ""}`}>{h}</p>
+                            ))}
                         </div>
-                    )}
+
+                        {payments.length === 0 ? (
+                            <div className="flex flex-col items-center py-16 text-center">
+                                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl mb-3">💳</div>
+                                <p className="text-slate-500 text-sm">No payment records found</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2 mt-3">
+                                {payments.map(payment => (
+                                    <div key={payment.id}
+                                        className="grid grid-cols-[80px_90px_1fr_110px_120px_130px_90px] gap-3 px-4 py-3.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/8 hover:border-white/15 rounded-xl transition-all items-center"
+                                    >
+                                        <p className="text-slate-400 text-xs font-bold">#{payment.id}</p>
+                                        <Link to={`/orders/${payment.orderId}`}
+                                            className="text-blue-400 hover:text-blue-300 font-bold text-sm no-underline transition-colors">
+                                            #{payment.orderId}
+                                        </Link>
+                                        <p className="text-slate-300 text-xs truncate">{payment.userEmail}</p>
+                                        <p className="text-white font-black text-sm text-right">${payment.amount.toFixed(2)}</p>
+                                        <div>
+                                            <span className={`px-3 py-1 rounded-full border text-xs font-black ${getStatusCls(payment.status)}`}>
+                                                {payment.status}
+                                            </span>
+                                        </div>
+                                        <p className="text-slate-500 text-xs truncate">{payment.reference || "N/A"}</p>
+                                        <div>
+                                            <Link to={`/payments/${payment.id}`}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 text-xs font-bold no-underline transition-all">
+                                                View →
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
+
             </div>
         </div>
     );
 }
-
-const SummaryCard = ({ label, value, color }) => (
-    <div style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "20px",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-        borderLeft: `4px solid ${color}`
-    }}>
-        <div style={{ fontSize: "14px", color: "#666", marginBottom: "8px" }}>{label}</div>
-        <div style={{ fontSize: "24px", fontWeight: "800", color }}>{value}</div>
-    </div>
-);

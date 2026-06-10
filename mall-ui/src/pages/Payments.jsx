@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import API from "../api";
+import API from "../api/api";
 import { useAuth } from "../AuthContext";
 
 export default function Payments() {
@@ -9,99 +9,76 @@ export default function Payments() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    useEffect(() => {
-        fetchPayments();
-    }, [role]);
+    useEffect(() => { fetchPayments(); }, [role]);
 
     function fetchPayments() {
         setLoading(true);
         const endpoint = role === "ADMIN" ? "/payments/pending" : "/payments/mine";
-
         API.get(endpoint)
             .then(res => setPayments(res.data))
-            .catch((err) => {
-                console.error("Fetch error:", err);
-                setError("Failed to load payments.");
-            })
+            .catch((err) => { console.error("Fetch error:", err); setError("Failed to load payments."); })
             .finally(() => setLoading(false));
     }
 
-    const getStatusStyle = (status) => {
-        const styles = {
-            VERIFIED: { color: "#4CAF50", bg: "rgba(76,175,80,0.1)", icon: "✓" },
-            REJECTED: { color: "#dc3545", bg: "rgba(220,53,69,0.1)", icon: "✗" },
-            PENDING: { color: "#FFA500", bg: "rgba(255,165,0,0.1)", icon: "⏳" }
-        };
-        return styles[status] || { color: "#6c757d", bg: "rgba(108,117,125,0.1)", icon: "?" };
+    const statusConfig = {
+        VERIFIED: { color: "text-emerald-400", border: "border-emerald-400/40", bg: "bg-emerald-400/10", dot: "bg-emerald-400", icon: "✓"  },
+        REJECTED: { color: "text-rose-400",    border: "border-rose-400/40",    bg: "bg-rose-400/10",    dot: "bg-rose-400",    icon: "✗"  },
+        PENDING:  { color: "text-amber-400",   border: "border-amber-400/40",   bg: "bg-amber-400/10",   dot: "bg-amber-400",   icon: "⏳" },
     };
+    const getStatusCfg = (s) => statusConfig[s] || { color: "text-slate-400", border: "border-slate-400/40", bg: "bg-slate-400/10", dot: "bg-slate-400", icon: "?" };
 
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)"
-            }}>
-                <div style={{ color: "white", fontSize: "24px", fontWeight: "600" }}>
-                    Loading payments...
-                </div>
+    /* ── Loading ── */
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                <p className="text-slate-400 font-semibold">Loading payments...</p>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (error) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)"
-            }}>
-                <div style={{
-                    background: "rgba(220,53,69,0.2)",
-                    backdropFilter: "blur(20px)",
-                    padding: "40px 60px",
-                    borderRadius: "20px",
-                    border: "2px solid #dc3545",
-                    color: "white",
-                    textAlign: "center"
-                }}>
-                    <div style={{ fontSize: "64px", marginBottom: "20px" }}>⚠️</div>
-                    <h2>{error}</h2>
-                </div>
+    /* ── Error ── */
+    if (error) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a] px-4 relative overflow-hidden">
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+            <div className="relative z-10 glass-card max-w-sm w-full text-center py-12">
+                <div className="text-5xl mb-4">⚠️</div>
+                <h2 className="text-white text-xl font-black mb-2">Something went wrong</h2>
+                <p className="text-rose-400 text-sm mb-6">{error}</p>
+                <button onClick={fetchPayments} className="btn-primary justify-center w-full">Retry</button>
             </div>
-        );
-    }
+        </div>
+    );
+
+    const totalAmount = payments
+        .filter(p => p.status === "VERIFIED")
+        .reduce((sum, p) => sum + p.amount, 0);
+
+    const statsData = [
+        { icon: "💰", label: "Total",    value: payments.length,                                               grad: "from-blue-500 to-violet-600"   },
+        { icon: "⏳", label: "Pending",  value: payments.filter(p => p.status === "PENDING").length,           grad: "from-amber-400 to-orange-500"  },
+        { icon: "✓",  label: "Verified", value: payments.filter(p => p.status === "VERIFIED").length,          grad: "from-emerald-500 to-teal-600"  },
+        ...(role === "CUSTOMER" ? [{ icon: "💵", label: "Verified Amount", value: `$${totalAmount.toFixed(2)}`, grad: "from-violet-500 to-purple-700" }] : []),
+    ];
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
-            padding: "60px 20px"
-        }}>
-            <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div className="min-h-screen bg-[#0a0a1a] px-4 py-16 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-violet-600/8 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px] pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+
+            <div className="relative z-10 max-w-6xl mx-auto">
+
                 {/* Header */}
-                <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "40px",
-                    flexWrap: "wrap",
-                    gap: "20px"
-                }}>
+                <div className="flex items-end justify-between flex-wrap gap-5 mb-12">
                     <div>
-                        <h1 style={{
-                            fontSize: "42px",
-                            fontWeight: "800",
-                            color: "#1A1A2E",
-                            marginBottom: "8px"
-                        }}>
-                            {role === "ADMIN" ? "💰 Pending Payments" : "💳 My Payments"}
+                        <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">
+                            {role === "ADMIN" ? "Admin · Finance" : "Account · Payments"}
+                        </p>
+                        <h1 className="text-4xl font-black text-white tracking-tight">
+                            {role === "ADMIN" ? "Pending Payments" : "My Payments"}
                         </h1>
-                        <p style={{ color: "#666", fontSize: "16px" }}>
+                        <p className="text-slate-400 text-sm mt-2">
                             {role === "ADMIN"
                                 ? "Review and approve payment submissions"
                                 : "Track your payment history and status"}
@@ -109,297 +86,133 @@ export default function Payments() {
                     </div>
 
                     {role === "CUSTOMER" && (
-                        <Link to="/payments/upload" style={{ textDecoration: "none" }}>
-                            <button style={{
-                                padding: "14px 28px",
-                                background: "linear-gradient(135deg, #4CAF50, #45a049)",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "12px",
-                                fontSize: "16px",
-                                fontWeight: "700",
-                                cursor: "pointer",
-                                boxShadow: "0 4px 15px rgba(76,175,80,0.3)",
-                                transition: "all 0.3s"
-                            }}
-                                    onMouseEnter={(e) => {
-                                        e.target.style.transform = "translateY(-2px)";
-                                        e.target.style.boxShadow = "0 6px 20px rgba(76,175,80,0.4)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.target.style.transform = "translateY(0)";
-                                        e.target.style.boxShadow = "0 4px 15px rgba(76,175,80,0.3)";
-                                    }}
-                            >
-                                + Upload New Payment
+                        <Link to="/payments/upload" className="no-underline">
+                            <button className="btn-primary">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                Upload New Payment
                             </button>
                         </Link>
                     )}
                 </div>
 
-                {/* Payments List */}
+                {/* Stats */}
+                {payments.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+                        {statsData.map(stat => (
+                            <div key={stat.label} className="bg-white/[0.03] border border-white/10 hover:border-white/20 hover:-translate-y-1 rounded-2xl p-5 text-center transition-all duration-200">
+                                <div className="text-2xl mb-2">{stat.icon}</div>
+                                <p className={`text-2xl font-black bg-gradient-to-br ${stat.grad} bg-clip-text text-transparent`}>{stat.value}</p>
+                                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mt-1">{stat.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Empty state */}
                 {payments.length === 0 ? (
-                    <div style={{
-                        background: "rgba(255, 255, 255, 0.8)",
-                        backdropFilter: "blur(20px)",
-                        WebkitBackdropFilter: "blur(20px)",
-                        border: "1px solid rgba(255,255,255,0.3)",
-                        borderRadius: "20px",
-                        padding: "80px 40px",
-                        textAlign: "center",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
-                    }}>
-                        <div style={{ fontSize: "80px", marginBottom: "24px" }}>💳</div>
-                        <h3 style={{
-                            fontSize: "24px",
-                            color: "#666",
-                            marginBottom: "12px",
-                            fontWeight: "700"
-                        }}>
-                            No Payments Found
-                        </h3>
-                        <p style={{ color: "#999", fontSize: "16px" }}>
+                    <div className="glass-card text-center py-16">
+                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mx-auto mb-4">💳</div>
+                        <p className="text-white font-black text-xl mb-2">No Payments Found</p>
+                        <p className="text-slate-500 text-sm">
                             {role === "ADMIN"
                                 ? "There are no pending payments to review"
                                 : "You haven't made any payments yet"}
                         </p>
+                        {role === "CUSTOMER" && (
+                            <Link to="/payments/upload" className="no-underline inline-block mt-6">
+                                <button className="btn-primary">Upload a Payment</button>
+                            </Link>
+                        )}
                     </div>
                 ) : (
-                    <div style={{
-                        background: "rgba(255, 255, 255, 0.8)",
-                        backdropFilter: "blur(20px)",
-                        WebkitBackdropFilter: "blur(20px)",
-                        border: "1px solid rgba(255,255,255,0.3)",
-                        borderRadius: "20px",
-                        padding: "30px",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                        overflowX: "auto"
-                    }}>
-                        <table style={{
-                            width: "100%",
-                            borderCollapse: "separate",
-                            borderSpacing: "0 12px"
-                        }}>
-                            <thead>
-                            <tr>
-                                <th style={tableHeaderStyle}>ID</th>
-                                <th style={tableHeaderStyle}>Order</th>
-                                <th style={tableHeaderStyle}>Reference</th>
-                                <th style={{...tableHeaderStyle, textAlign: "right"}}>Amount</th>
-                                <th style={{...tableHeaderStyle, textAlign: "center"}}>Status</th>
-                                {role === "CUSTOMER" && (
-                                    <th style={tableHeaderStyle}>Admin Note</th>
-                                )}
-                                <th style={{...tableHeaderStyle, textAlign: "center"}}>Action</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {payments.map(payment => {
-                                const statusStyle = getStatusStyle(payment.status);
-                                return (
-                                    <tr key={payment.id} style={{
-                                        background: "rgba(30,144,255,0.03)",
-                                        transition: "all 0.3s"
-                                    }}>
-                                        <td style={tableCellStyle}>
-                                            <span style={{
-                                                fontWeight: "700",
-                                                color: "#1A1A2E"
-                                            }}>
-                                                #{payment.id}
-                                            </span>
-                                        </td>
-                                        <td style={tableCellStyle}>
-                                            <Link to={`/orders/${payment.orderId}`} style={{
-                                                color: "#1E90FF",
-                                                textDecoration: "none",
-                                                fontWeight: "600",
-                                                transition: "color 0.3s"
-                                            }}>
+                    /* ── Payments table ── */
+                    <div className="glass-card overflow-x-auto">
+                        <div className={`min-w-[640px]`}>
+
+                            {/* Column headers */}
+                            <div className={`grid gap-3 px-4 pb-4 border-b border-white/8 text-slate-600 text-xs font-bold uppercase tracking-widest ${
+                                role === "CUSTOMER"
+                                    ? "grid-cols-[80px_130px_130px_100px_130px_1fr_120px]"
+                                    : "grid-cols-[80px_130px_130px_100px_130px_120px]"
+                            }`}>
+                                <span>ID</span>
+                                <span>Order</span>
+                                <span>Reference</span>
+                                <span className="text-right">Amount</span>
+                                <span>Status</span>
+                                {role === "CUSTOMER" && <span>Admin Note</span>}
+                                <span className="text-center">Action</span>
+                            </div>
+
+                            {/* Rows */}
+                            <div className="flex flex-col gap-2 mt-3">
+                                {payments.map(payment => {
+                                    const sc = getStatusCfg(payment.status);
+                                    return (
+                                        <div
+                                            key={payment.id}
+                                            className={`grid gap-3 px-4 py-4 bg-white/[0.02] hover:bg-white/[0.04] border border-white/8 hover:border-white/15 rounded-xl transition-all items-center ${
+                                                role === "CUSTOMER"
+                                                    ? "grid-cols-[80px_130px_130px_100px_130px_1fr_120px]"
+                                                    : "grid-cols-[80px_130px_130px_100px_130px_120px]"
+                                            }`}
+                                        >
+                                            {/* ID */}
+                                            <p className="text-slate-400 text-xs font-black">#{payment.id}</p>
+
+                                            {/* Order */}
+                                            <Link to={`/orders/${payment.orderId}`}
+                                                className="text-blue-400 hover:text-blue-300 font-bold text-sm no-underline transition-colors truncate">
                                                 Order #{payment.orderId}
                                             </Link>
-                                        </td>
-                                        <td style={tableCellStyle}>
-                                            <strong style={{ color: "#1A1A2E" }}>
-                                                {payment.reference}
-                                            </strong>
-                                        </td>
-                                        <td style={{...tableCellStyle, textAlign: "right"}}>
-                                            <span style={{
-                                                fontSize: "18px",
-                                                fontWeight: "800",
-                                                background: "linear-gradient(135deg, #FFA500, #FF6B6B)",
-                                                WebkitBackgroundClip: "text",
-                                                WebkitTextFillColor: "transparent"
-                                            }}>
-                                                ${payment.amount}
-                                            </span>
-                                        </td>
-                                        <td style={{...tableCellStyle, textAlign: "center"}}>
-                                            <span style={{
-                                                padding: "6px 16px",
-                                                borderRadius: "12px",
-                                                background: statusStyle.bg,
-                                                color: statusStyle.color,
-                                                fontWeight: "700",
-                                                fontSize: "13px",
-                                                border: `2px solid ${statusStyle.color}`,
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                gap: "6px"
-                                            }}>
-                                                <span>{statusStyle.icon}</span>
-                                                {payment.status}
-                                            </span>
-                                        </td>
-                                        {role === "CUSTOMER" && (
-                                            <td style={{...tableCellStyle, fontSize: "14px"}}>
-                                                <span style={{ color: "#666", fontStyle: payment.adminNote ? "normal" : "italic" }}>
-                                                    {payment.adminNote || "No note"}
-                                                </span>
-                                            </td>
-                                        )}
-                                        <td style={{...tableCellStyle, textAlign: "center"}}>
-                                            {role === "ADMIN" && payment.status === "PENDING" ? (
-                                                <Link to={`/payments/${payment.id}`} style={{ textDecoration: "none" }}>
-                                                    <button style={{
-                                                        padding: "8px 20px",
-                                                        background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                                        color: "white",
-                                                        border: "none",
-                                                        borderRadius: "10px",
-                                                        fontWeight: "700",
-                                                        cursor: "pointer",
-                                                        fontSize: "14px",
-                                                        transition: "all 0.3s",
-                                                        boxShadow: "0 4px 12px rgba(30,144,255,0.3)"
-                                                    }}>
-                                                        Review →
-                                                    </button>
-                                                </Link>
-                                            ) : (
-                                                <a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                                                    <button style={{
-                                                        padding: "8px 20px",
-                                                        background: "#6c757d",
-                                                        color: "white",
-                                                        border: "none",
-                                                        borderRadius: "10px",
-                                                        fontWeight: "700",
-                                                        cursor: "pointer",
-                                                        fontSize: "14px",
-                                                        transition: "all 0.3s"
-                                                    }}>
-                                                        📄 View Receipt
-                                                    </button>
-                                                </a>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
 
-                {/* Summary Stats */}
-                {payments.length > 0 && (
-                    <div style={{
-                        marginTop: "30px",
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                        gap: "20px"
-                    }}>
-                        <StatCard
-                            icon="💰"
-                            label="Total Payments"
-                            value={payments.length}
-                            color="#1E90FF"
-                        />
-                        <StatCard
-                            icon="⏳"
-                            label="Pending"
-                            value={payments.filter(p => p.status === "PENDING").length}
-                            color="#FFA500"
-                        />
-                        <StatCard
-                            icon="✓"
-                            label="Verified"
-                            value={payments.filter(p => p.status === "VERIFIED").length}
-                            color="#4CAF50"
-                        />
-                        {role === "CUSTOMER" && (
-                            <StatCard
-                                icon="💵"
-                                label="Total Amount"
-                                value={`$${payments.filter(p => p.status === "VERIFIED").reduce((sum, p) => sum + p.amount, 0).toFixed(2)}`}
-                                color="#4B368B"
-                            />
-                        )}
+                                            {/* Reference */}
+                                            <p className="text-white font-bold text-sm truncate">{payment.reference}</p>
+
+                                            {/* Amount */}
+                                            <p className="text-right font-black text-sm gradient-text-price">${payment.amount}</p>
+
+                                            {/* Status */}
+                                            <div>
+                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-black ${sc.bg} ${sc.border} ${sc.color}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${sc.dot} ${payment.status === "PENDING" ? "animate-pulse" : ""}`} />
+                                                    {sc.icon} {payment.status}
+                                                </span>
+                                            </div>
+
+                                            {/* Admin note (customer only) */}
+                                            {role === "CUSTOMER" && (
+                                                <p className={`text-xs truncate ${payment.adminNote ? "text-slate-400" : "text-slate-600 italic"}`}>
+                                                    {payment.adminNote || "No note"}
+                                                </p>
+                                            )}
+
+                                            {/* Action */}
+                                            <div className="flex justify-center">
+                                                {role === "ADMIN" && payment.status === "PENDING" ? (
+                                                    <Link to={`/payments/${payment.id}`} className="no-underline">
+                                                        <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-400 hover:bg-blue-500/20 text-xs font-black transition-all">
+                                                            Review →
+                                                        </button>
+                                                    </Link>
+                                                ) : (
+                                                    <a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer" className="no-underline">
+                                                        <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/12 text-slate-400 hover:border-white/20 hover:text-white text-xs font-bold transition-all">
+                                                            📄 Receipt
+                                                        </button>
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
         </div>
     );
 }
-
-// Helper Component
-const StatCard = ({ icon, label, value, color }) => (
-    <div style={{
-        background: "rgba(255, 255, 255, 0.8)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        border: "1px solid rgba(255,255,255,0.3)",
-        borderRadius: "16px",
-        padding: "24px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-        textAlign: "center",
-        transition: "all 0.3s"
-    }}
-         onMouseEnter={(e) => {
-             e.currentTarget.style.transform = "translateY(-5px)";
-             e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.12)";
-         }}
-         onMouseLeave={(e) => {
-             e.currentTarget.style.transform = "translateY(0)";
-             e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.08)";
-         }}
-    >
-        <div style={{ fontSize: "40px", marginBottom: "12px" }}>{icon}</div>
-        <div style={{
-            fontSize: "28px",
-            fontWeight: "800",
-            color: color,
-            marginBottom: "6px"
-        }}>
-            {value}
-        </div>
-        <div style={{
-            fontSize: "14px",
-            color: "#666",
-            fontWeight: "600",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px"
-        }}>
-            {label}
-        </div>
-    </div>
-);
-
-const tableHeaderStyle = {
-    padding: "12px 16px",
-    textAlign: "left",
-    fontSize: "12px",
-    fontWeight: "700",
-    color: "#666",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px"
-};
-
-const tableCellStyle = {
-    padding: "16px",
-    borderRadius: "8px",
-    fontSize: "15px",
-    color: "#1A1A2E"
-};

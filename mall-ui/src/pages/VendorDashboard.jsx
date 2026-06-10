@@ -1,172 +1,90 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import API from "../api";
+import API from "../api/api";
 
 export default function VendorDashboard() {
     const [stats, setStats] = useState({
-        totalProducts: 0,
-        lowStockProducts: 0,
-        totalOrders: 0,
-        pendingOrders: 0,
-        totalRevenue: 0,
-        activeDiscounts: 0
+        totalProducts: 0, lowStockProducts: 0, totalOrders: 0,
+        pendingOrders: 0, totalRevenue: 0, activeDiscounts: 0
     });
     const [lowStockProducts, setLowStockProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
+    useEffect(() => { fetchDashboardData(); }, []);
 
     async function fetchDashboardData() {
-        setLoading(true);
-        setError("");
-
+        setLoading(true); setError("");
         try {
-            // ✅ Fetch all data with proper error handling
-            console.log("Fetching dashboard data...");
-
             const [productsRes, ordersRes, discountsRes] = await Promise.all([
-                API.get("/products").catch(err => {
-                    console.error("Products API error:", err);
-                    return { data: [] };
-                }),
-                API.get("/orders").catch(err => {  // ✅ Changed from /orders?status=all
-                    console.error("Orders API error:", err);
-                    return { data: [] };
-                }),
-                API.get("/discounts").catch(err => {
-                    console.error("Discounts API error:", err);
-                    return { data: [] };
-                })
+                API.get("/products").catch(err => { console.error("Products API error:", err); return { data: [] }; }),
+                API.get("/orders").catch(err => { console.error("Orders API error:", err); return { data: [] }; }),
+                API.get("/discounts").catch(err => { console.error("Discounts API error:", err); return { data: [] }; })
             ]);
-
-            console.log("Products:", productsRes.data);
-            console.log("Orders:", ordersRes.data);
-            console.log("Discounts:", discountsRes.data);
-
             const products = Array.isArray(productsRes.data) ? productsRes.data : [];
             const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
             const discounts = Array.isArray(discountsRes.data) ? discountsRes.data : [];
-
-            // ✅ Filter low stock products (stock < 10)
             const lowStock = products.filter(p => p.stock != null && p.stock < 10);
-
-            // ✅ Calculate total revenue safely
-            const totalRevenue = orders.reduce((sum, o) => {
-                const orderTotal = parseFloat(o.total) || 0;
-                return sum + orderTotal;
-            }, 0);
-
-            // ✅ Count pending orders safely
-            const pendingCount = orders.filter(o =>
-                o.status && o.status.toUpperCase() === "PENDING"
-            ).length;
-
-            // ✅ Count active discounts safely
+            const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+            const pendingCount = orders.filter(o => o.status && o.status.toUpperCase() === "PENDING").length;
             const activeDiscountCount = discounts.filter(d => d.active === true).length;
-
-            setStats({
-                totalProducts: products.length,
-                lowStockProducts: lowStock.length,
-                totalOrders: orders.length,
-                pendingOrders: pendingCount,
-                totalRevenue: totalRevenue,
-                activeDiscounts: activeDiscountCount
-            });
-
+            setStats({ totalProducts: products.length, lowStockProducts: lowStock.length, totalOrders: orders.length, pendingOrders: pendingCount, totalRevenue, activeDiscounts: activeDiscountCount });
             setLowStockProducts(lowStock);
-
         } catch (err) {
             console.error("Failed to load dashboard data:", err);
             setError("Failed to load dashboard data. Please try refreshing the page.");
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     }
 
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)"
-            }}>
-                <div style={{ color: "#666", fontSize: "20px", fontWeight: "700" }}>
-                    ⏳ Loading dashboard...
-                </div>
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                <p className="text-slate-400 font-semibold">Loading dashboard...</p>
             </div>
-        );
-    }
+        </div>
+    );
 
     const statCards = [
-        { label: "Total Products", value: stats.totalProducts, icon: "📦", color: "linear-gradient(135deg, #4B368B, #2E2566)" },
-        { label: "Low Stock Alert", value: stats.lowStockProducts, icon: "⚠️", color: "linear-gradient(135deg, #FFA500, #FF8C00)" },
-        { label: "Total Orders", value: stats.totalOrders, icon: "🛒", color: "linear-gradient(135deg, #1E90FF, #4B368B)" },
-        { label: "Pending Orders", value: stats.pendingOrders, icon: "⏳", color: "linear-gradient(135deg, #9C27B0, #7B1FA2)" },
-        { label: "Total Revenue", value: `$${stats.totalRevenue.toFixed(2)}`, icon: "💰", color: "linear-gradient(135deg, #4CAF50, #45a049)" },
-        { label: "Active Discounts", value: stats.activeDiscounts, icon: "🏷️", color: "linear-gradient(135deg, #dc3545, #c82333)" }
+        { label: "Total Products",  value: stats.totalProducts,            icon: "📦", grad: "from-violet-600 to-purple-800",  glow: "shadow-violet-500/20" },
+        { label: "Low Stock Alert", value: stats.lowStockProducts,         icon: "⚠️", grad: "from-amber-400 to-orange-500",   glow: "shadow-amber-500/20" },
+        { label: "Total Orders",    value: stats.totalOrders,              icon: "🛒", grad: "from-blue-500 to-violet-600",    glow: "shadow-blue-500/20"  },
+        { label: "Pending Orders",  value: stats.pendingOrders,            icon: "⏳", grad: "from-fuchsia-500 to-purple-700", glow: "shadow-fuchsia-500/20"},
+        { label: "Total Revenue",   value: `$${stats.totalRevenue.toFixed(2)}`, icon: "💰", grad: "from-emerald-400 to-teal-600",  glow: "shadow-emerald-500/20"},
+        { label: "Active Discounts",value: stats.activeDiscounts,          icon: "🏷️", grad: "from-rose-500 to-pink-700",     glow: "shadow-rose-500/20"  },
     ];
 
     const quickActions = [
-        { label: "Add Product", icon: "➕", link: "/products/new", color: "#4CAF50" },
-        { label: "My Products", icon: "📦", link: "/products", color: "#4B368B" },
-        { label: "View Orders", icon: "🛒", link: "/orders", color: "#1E90FF" },
-        { label: "Discounts", icon: "🏷️", link: "/discounts", color: "#dc3545" }
+        { label: "Add Product", icon: "➕", link: "/products/new", grad: "from-emerald-500 to-teal-600",   border: "border-emerald-500/30 hover:border-emerald-400" },
+        { label: "My Products", icon: "📦", link: "/products",     grad: "from-violet-500 to-purple-700",  border: "border-violet-500/30 hover:border-violet-400"  },
+        { label: "View Orders", icon: "🛒", link: "/orders",       grad: "from-blue-500 to-cyan-600",      border: "border-blue-500/30 hover:border-blue-400"      },
+        { label: "Discounts",   icon: "🏷️", link: "/discounts",   grad: "from-rose-500 to-pink-600",      border: "border-rose-500/30 hover:border-rose-400"      },
     ];
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
-            padding: "60px 20px"
-        }}>
-            <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+        <div className="min-h-screen bg-[#0a0a1a] px-4 py-20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-violet-600/8 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-amber-500/8 blur-[100px] pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+
+            <div className="relative z-10 max-w-7xl mx-auto">
+
                 {/* Header */}
-                <div style={{ marginBottom: "40px", textAlign: "center" }}>
-                    <h1 style={{
-                        fontSize: "48px",
-                        fontWeight: "800",
-                        background: "linear-gradient(135deg, #4B368B, #2E2566)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        marginBottom: "8px"
-                    }}>
+                <div className="text-center mb-14">
+                    <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">Vendor Panel</p>
+                    <h1 className="text-5xl lg:text-6xl font-black text-white tracking-tight mb-3">
                         🏪 Vendor Dashboard
                     </h1>
-                    <p style={{ color: "#666", fontSize: "18px", fontWeight: "600" }}>
-                        Manage your store and inventory
-                    </p>
+                    <p className="text-slate-400 text-lg">Manage your store and inventory</p>
                 </div>
 
-                {/* ✅ Error Message */}
+                {/* Error */}
                 {error && (
-                    <div style={{
-                        padding: "20px",
-                        marginBottom: "30px",
-                        background: "#f8d7da",
-                        color: "#721c24",
-                        borderRadius: "12px",
-                        textAlign: "center",
-                        fontWeight: "700",
-                        border: "2px solid #f5c6cb"
-                    }}>
-                        ⚠️ {error}
+                    <div className="flex items-center justify-between gap-4 p-5 mb-8 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300">
+                        <span className="font-semibold text-sm">⚠️ {error}</span>
                         <button
                             onClick={fetchDashboardData}
-                            style={{
-                                marginLeft: "16px",
-                                padding: "8px 16px",
-                                background: "#721c24",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                                fontWeight: "700"
-                            }}
+                            className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-bold rounded-xl transition-colors whitespace-nowrap"
                         >
                             Retry
                         </button>
@@ -174,66 +92,15 @@ export default function VendorDashboard() {
                 )}
 
                 {/* Stats Grid */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                    gap: "24px",
-                    marginBottom: "40px"
-                }}>
-                    {statCards.map((stat, index) => (
-                        <div
-                            key={index}
-                            style={{
-                                background: "rgba(255, 255, 255, 0.8)",
-                                backdropFilter: "blur(20px)",
-                                WebkitBackdropFilter: "blur(20px)",
-                                border: "1px solid rgba(255,255,255,0.3)",
-                                borderRadius: "20px",
-                                padding: "28px",
-                                boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                                transition: "all 0.3s"
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = "translateY(-8px)";
-                                e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.15)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = "translateY(0)";
-                                e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.1)";
-                            }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                    {statCards.map((stat, i) => (
+                        <div key={i} className={`group bg-white/[0.03] border border-white/10 hover:border-white/20 rounded-2xl p-7 hover:-translate-y-2 transition-all duration-300 shadow-xl ${stat.glow}`}>
+                            <div className="flex items-start justify-between">
                                 <div>
-                                    <p style={{
-                                        fontSize: "14px",
-                                        color: "#666",
-                                        fontWeight: "600",
-                                        marginBottom: "8px",
-                                        textTransform: "uppercase",
-                                        letterSpacing: "1px"
-                                    }}>
-                                        {stat.label}
-                                    </p>
-                                    <h3 style={{
-                                        fontSize: "32px",
-                                        fontWeight: "800",
-                                        color: "#1A1A2E",
-                                        margin: 0
-                                    }}>
-                                        {stat.value}
-                                    </h3>
+                                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-3">{stat.label}</p>
+                                    <h3 className="text-4xl font-black text-white">{stat.value}</h3>
                                 </div>
-                                <div style={{
-                                    width: "60px",
-                                    height: "60px",
-                                    borderRadius: "16px",
-                                    background: stat.color,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "28px",
-                                    boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
-                                }}>
+                                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${stat.grad} flex items-center justify-center text-2xl shadow-lg flex-shrink-0`}>
                                     {stat.icon}
                                 </div>
                             </div>
@@ -243,49 +110,17 @@ export default function VendorDashboard() {
 
                 {/* Low Stock Alert */}
                 {lowStockProducts.length > 0 && (
-                    <div style={{
-                        background: "rgba(255, 255, 255, 0.8)",
-                        backdropFilter: "blur(20px)",
-                        WebkitBackdropFilter: "blur(20px)",
-                        border: "2px solid #FFA50080",
-                        borderRadius: "24px",
-                        padding: "30px",
-                        boxShadow: "0 8px 32px rgba(255,165,0,0.2)",
-                        marginBottom: "30px"
-                    }}>
-                        <h2 style={{
-                            fontSize: "24px",
-                            fontWeight: "800",
-                            color: "#FFA500",
-                            marginBottom: "20px"
-                        }}>
-                            ⚠️ Low Stock Products
+                    <div className="bg-white/[0.03] border border-amber-500/30 rounded-2xl p-8 mb-8 shadow-xl shadow-amber-500/10">
+                        <h2 className="text-amber-400 text-xl font-black mb-6 flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-lg bg-amber-400/15 flex items-center justify-center text-base">⚠️</span>
+                            Low Stock Products
                         </h2>
-                        <div style={{ display: "grid", gap: "12px" }}>
-                            {lowStockProducts.slice(0, 5).map((product, index) => (
-                                <div
-                                    key={index}
-                                    style={{
-                                        padding: "16px 20px",
-                                        background: "linear-gradient(135deg, rgba(255,165,0,0.1), rgba(255,140,0,0.15))",
-                                        borderRadius: "12px",
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center"
-                                    }}
-                                >
-                                    <span style={{ fontWeight: "700", color: "#1A1A2E" }}>
-                                        {product.name}
-                                    </span>
-                                    <span style={{
-                                        padding: "6px 12px",
-                                        background: "#FFA500",
-                                        color: "white",
-                                        borderRadius: "8px",
-                                        fontSize: "14px",
-                                        fontWeight: "700"
-                                    }}>
-                                        Stock: {product.stock}
+                        <div className="flex flex-col gap-3">
+                            {lowStockProducts.slice(0, 5).map((product, i) => (
+                                <div key={i} className="flex items-center justify-between px-5 py-4 bg-amber-500/5 border border-amber-500/15 rounded-xl">
+                                    <span className="text-white font-semibold text-sm">{product.name}</span>
+                                    <span className="px-3 py-1 bg-amber-400/20 border border-amber-400/30 text-amber-300 text-xs font-bold rounded-full">
+                                        {product.stock} left
                                     </span>
                                 </div>
                             ))}
@@ -294,68 +129,25 @@ export default function VendorDashboard() {
                 )}
 
                 {/* Quick Actions */}
-                <div style={{
-                    background: "rgba(255, 255, 255, 0.8)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: "24px",
-                    padding: "40px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
-                }}>
-                    <h2 style={{
-                        fontSize: "24px",
-                        fontWeight: "800",
-                        color: "#1A1A2E",
-                        marginBottom: "24px"
-                    }}>
-                        ⚡ Quick Actions
+                <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8">
+                    <h2 className="text-white text-xl font-black mb-6 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-amber-400/15 flex items-center justify-center text-base">⚡</span>
+                        Quick Actions
                     </h2>
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                        gap: "16px"
-                    }}>
-                        {quickActions.map((action, index) => (
-                            <Link
-                                key={index}
-                                to={action.link}
-                                style={{
-                                    textDecoration: "none",
-                                    padding: "20px",
-                                    background: `linear-gradient(135deg, ${action.color}15, ${action.color}25)`,
-                                    borderRadius: "16px",
-                                    border: `2px solid ${action.color}40`,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    gap: "12px",
-                                    transition: "all 0.3s"
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-4px)";
-                                    e.currentTarget.style.borderColor = action.color;
-                                    e.currentTarget.style.boxShadow = `0 8px 24px ${action.color}40`;
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.borderColor = `${action.color}40`;
-                                    e.currentTarget.style.boxShadow = "none";
-                                }}
-                            >
-                                <span style={{ fontSize: "36px" }}>{action.icon}</span>
-                                <span style={{
-                                    fontSize: "16px",
-                                    fontWeight: "700",
-                                    color: "#1A1A2E",
-                                    textAlign: "center"
-                                }}>
-                                    {action.label}
-                                </span>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        {quickActions.map((action, i) => (
+                            <Link key={i} to={action.link}>
+                                <div className={`group flex flex-col items-center gap-4 p-6 rounded-2xl bg-white/[0.02] border ${action.border} transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer`}>
+                                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${action.grad} flex items-center justify-center text-2xl shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                                        {action.icon}
+                                    </div>
+                                    <span className="text-white text-sm font-bold text-center">{action.label}</span>
+                                </div>
                             </Link>
                         ))}
                     </div>
                 </div>
+
             </div>
         </div>
     );

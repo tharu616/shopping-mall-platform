@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import API from "../api";
+import API from "../api/api";
 import { useAuth } from "../AuthContext";
-import "./Home.css"; // We'll create this for animations
+import "./Home.css";
 
 export default function Home() {
     const { token } = useAuth();
@@ -40,251 +40,113 @@ export default function Home() {
     if (token) return null;
 
     return (
-        <div style={{
-            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            backgroundColor: "#f8f9fa",
-            overflow: "hidden",
-            margin: 0,  // ✅ Add this
-            padding: 0  // ✅ Add this
-        }}>
-            {/* Hero Section with Modern Gradient */}
-            <section style={{
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 50%, #2E2566 100%)",
-                minHeight: "90vh",
-                display: "flex",
-                alignItems: "center",
-                position: "relative",
-                overflow: "hidden"
-            }}>
-                {/* Animated Background Shapes */}
-                <div style={{
-                    position: "absolute",
-                    top: "-50%",
-                    right: "-10%",
-                    width: "600px",
-                    height: "600px",
-                    background: "rgba(255, 165, 0, 0.1)",
-                    borderRadius: "50%",
-                    filter: "blur(100px)"
-                }} />
-                <div style={{
-                    position: "absolute",
-                    bottom: "-30%",
-                    left: "-5%",
-                    width: "500px",
-                    height: "500px",
-                    background: "rgba(30, 144, 255, 0.15)",
-                    borderRadius: "50%",
-                    filter: "blur(80px)"
-                }} />
+        <div className="font-inter bg-[#0a0a1a] overflow-x-hidden">
 
-                <div style={{
-                    maxWidth: "1200px",
-                    margin: "0 auto",
-                    padding: "80px 40px",
-                    position: "relative",
-                    zIndex: 1
-                }}>
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "60px",
-                        alignItems: "center"
-                    }}>
-                        {/* Left Content */}
-                        <div>
-                            <div style={{
-                                display: "inline-block",
-                                padding: "8px 20px",
-                                background: "rgba(255, 165, 0, 0.2)",
-                                borderRadius: "50px",
-                                marginBottom: "24px",
-                                border: "1px solid rgba(255, 165, 0, 0.3)"
-                            }}>
-                                <span style={{
-                                    color: "#FFA500",
-                                    fontSize: "14px",
-                                    fontWeight: "600",
-                                    letterSpacing: "1px"
-                                }}>
-                                    ✨ WELCOME TO THE FUTURE OF SHOPPING
-                                </span>
-                            </div>
+            {/* ── Hero ── */}
+            <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-[#0d0d2b] via-[#1a1040] to-[#0a0a1a]">
+                {/* Glow orbs */}
+                <div className="orb orb-blue" />
+                <div className="orb orb-amber" />
+                <div className="orb orb-violet" />
 
-                            <h1 style={{
-                                fontSize: "64px",
-                                fontWeight: "800",
-                                color: "white",
-                                marginBottom: "24px",
-                                lineHeight: "1.1",
-                                letterSpacing: "-2px"
-                            }}>
+                {/* Grid overlay */}
+                <div className="absolute inset-0 grid-overlay pointer-events-none" />
+
+                <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 py-28 w-full">
+                    <div className="grid lg:grid-cols-2 gap-20 items-center">
+
+                        {/* Left */}
+                        <div className="animate-fadeInUp">
+                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-400 text-xs font-bold tracking-widest uppercase mb-8">
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                                Welcome to the Future of Shopping
+                            </span>
+
+                            <h1 className="text-6xl lg:text-7xl font-black text-white leading-[1.05] tracking-tight mb-7">
                                 Discover
-                                <span style={{
-                                    background: "linear-gradient(90deg, #FFA500, #FF6B6B)",
-                                    WebkitBackgroundClip: "text",
-                                    WebkitTextFillColor: "transparent",
-                                    display: "block"
-                                }}>
+                                <span className="block gradient-text-hero">
                                     Amazing Products
                                 </span>
                             </h1>
 
-                            <p style={{
-                                fontSize: "20px",
-                                color: "rgba(255,255,255,0.8)",
-                                marginBottom: "40px",
-                                lineHeight: "1.6",
-                                maxWidth: "500px"
-                            }}>
+                            <p className="text-lg text-slate-400 max-w-lg leading-relaxed mb-10">
                                 Experience next-level shopping with curated collections, exclusive deals, and lightning-fast delivery.
                             </p>
 
-                            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-                                <Link to="/register" style={{ textDecoration: "none" }}>
-                                    <button style={{
-                                        padding: "18px 40px",
-                                        fontSize: "16px",
-                                        fontWeight: "600",
-                                        background: "linear-gradient(135deg, #FFA500, #FF8C00)",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "12px",
-                                        cursor: "pointer",
-                                        boxShadow: "0 10px 30px rgba(255, 165, 0, 0.4)",
-                                        transition: "all 0.3s ease",
-                                        transform: "translateY(0)"
-                                    }}
-                                            onMouseEnter={(e) => {
-                                                e.target.style.transform = "translateY(-3px)";
-                                                e.target.style.boxShadow = "0 15px 40px rgba(255, 165, 0, 0.6)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.target.style.transform = "translateY(0)";
-                                                e.target.style.boxShadow = "0 10px 30px rgba(255, 165, 0, 0.4)";
-                                            }}
-                                    >
-                                        Get Started Free →
+                            <div className="flex flex-wrap gap-4 mb-16">
+                                <Link to="/register">
+                                    <button className="btn-primary">
+                                        Get Started Free
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                                     </button>
                                 </Link>
-
-                                <Link to="/products" style={{ textDecoration: "none" }}>
-                                    <button style={{
-                                        padding: "18px 40px",
-                                        fontSize: "16px",
-                                        fontWeight: "600",
-                                        background: "rgba(255,255,255,0.1)",
-                                        color: "white",
-                                        border: "2px solid rgba(255,255,255,0.3)",
-                                        borderRadius: "12px",
-                                        cursor: "pointer",
-                                        backdropFilter: "blur(10px)",
-                                        transition: "all 0.3s ease"
-                                    }}
-                                            onMouseEnter={(e) => {
-                                                e.target.style.background = "rgba(255,255,255,0.2)";
-                                                e.target.style.borderColor = "rgba(255,255,255,0.5)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.target.style.background = "rgba(255,255,255,0.1)";
-                                                e.target.style.borderColor = "rgba(255,255,255,0.3)";
-                                            }}
-                                    >
+                                <Link to="/products">
+                                    <button className="btn-ghost">
                                         Explore Products
                                     </button>
                                 </Link>
                             </div>
 
-                            {/* Stats Row */}
-                            <div style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(3, 1fr)",
-                                gap: "20px",
-                                marginTop: "60px"
-                            }}>
+                            {/* Stats */}
+                            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-white/10">
                                 <StatBadge number={`${stats.products}+`} label="Products" />
                                 <StatBadge number="1K+" label="Customers" />
                                 <StatBadge number="500+" label="Orders" />
                             </div>
                         </div>
 
-                        {/* Right Content - Floating Card */}
-                        <div style={{ position: "relative" }}>
-                            <div style={{
-                                background: "rgba(255,255,255,0.1)",
-                                backdropFilter: "blur(20px)",
-                                borderRadius: "24px",
-                                padding: "40px",
-                                border: "1px solid rgba(255,255,255,0.2)",
-                                boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-                                transform: "perspective(1000px) rotateY(-5deg)"
-                            }}>
-                                <div style={{ fontSize: "120px", textAlign: "center", marginBottom: "20px" }}>
-                                    🛍️
-                                </div>
-                                <h3 style={{
-                                    color: "white",
-                                    fontSize: "24px",
-                                    textAlign: "center",
-                                    marginBottom: "12px"
-                                }}>
-                                    Shop With Confidence
-                                </h3>
-                                <p style={{
-                                    color: "rgba(255,255,255,0.7)",
-                                    textAlign: "center",
-                                    lineHeight: "1.6"
-                                }}>
+                        {/* Right – floating card */}
+                        <div className="hidden lg:flex justify-center animate-floatSlow">
+                            <div className="glass-card w-80 text-center">
+                                <div className="text-9xl mb-6 drop-shadow-2xl">🛍️</div>
+                                <h3 className="text-white text-2xl font-bold mb-3">Shop With Confidence</h3>
+                                <p className="text-slate-400 leading-relaxed text-sm">
                                     Secure payments, fast delivery, and 24/7 customer support
                                 </p>
+                                <div className="mt-6 flex justify-center gap-3">
+                                    {["🔒","⚡","🎁"].map((e, i) => (
+                                        <span key={i} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg border border-white/10">{e}</span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </section>
 
-            {/* Features Section */}
-            <section style={{ padding: "100px 40px", background: "white" }}>
-                <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-                    <div style={{ textAlign: "center", marginBottom: "60px" }}>
-                        <h2 style={{
-                            fontSize: "48px",
-                            fontWeight: "800",
-                            color: "#1A1A2E",
-                            marginBottom: "16px"
-                        }}>
-                            Why Choose Us?
-                        </h2>
-                        <p style={{ fontSize: "18px", color: "#666", maxWidth: "600px", margin: "0 auto" }}>
+            {/* ── Features ── */}
+            <section className="py-28 bg-[#0d0d20]">
+                <div className="max-w-7xl mx-auto px-6 lg:px-16">
+                    <div className="text-center mb-16">
+                        <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">Our Advantages</p>
+                        <h2 className="text-5xl font-black text-white mb-4">Why Choose Us?</h2>
+                        <p className="text-slate-400 text-lg max-w-xl mx-auto">
                             Experience the perfect blend of quality, convenience, and innovation
                         </p>
                     </div>
 
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                        gap: "30px"
-                    }}>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         <FeatureCard
-                            gradient="linear-gradient(135deg, #1E90FF, #4B368B)"
+                            gradient="from-blue-500 to-violet-600"
                             icon="🚀"
                             title="Lightning Fast"
                             description="Get your orders delivered in record time with our express shipping"
                         />
                         <FeatureCard
-                            gradient="linear-gradient(135deg, #FFA500, #FF6B6B)"
+                            gradient="from-amber-400 to-orange-500"
                             icon="💎"
                             title="Premium Quality"
                             description="Curated selection of high-quality products from trusted brands"
                         />
                         <FeatureCard
-                            gradient="linear-gradient(135deg, #4B368B, #2E2566)"
+                            gradient="from-violet-600 to-purple-800"
                             icon="🔒"
                             title="Secure Payments"
                             description="Bank-level security with multiple payment options"
                         />
                         <FeatureCard
-                            gradient="linear-gradient(135deg, #1E90FF, #1A1A2E)"
+                            gradient="from-cyan-400 to-blue-600"
                             icon="🎁"
                             title="Exclusive Deals"
                             description="Members-only discounts and special offers every day"
@@ -293,26 +155,15 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* Categories Section */}
+            {/* ── Categories ── */}
             {categories.length > 0 && (
-                <section style={{ padding: "100px 40px", background: "#f8f9fa" }}>
-                    <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-                        <div style={{ textAlign: "center", marginBottom: "60px" }}>
-                            <h2 style={{
-                                fontSize: "48px",
-                                fontWeight: "800",
-                                color: "#1A1A2E",
-                                marginBottom: "16px"
-                            }}>
-                                Shop by Category
-                            </h2>
+                <section className="py-28 bg-[#0a0a1a]">
+                    <div className="max-w-7xl mx-auto px-6 lg:px-16">
+                        <div className="text-center mb-16">
+                            <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">Browse</p>
+                            <h2 className="text-5xl font-black text-white">Shop by Category</h2>
                         </div>
-
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                            gap: "24px"
-                        }}>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {categories.map((cat, index) => (
                                 <CategoryCard key={cat.id} category={cat} index={index} />
                             ))}
@@ -321,50 +172,25 @@ export default function Home() {
                 </section>
             )}
 
-            {/* Featured Products */}
+            {/* ── Featured Products ── */}
             {featuredProducts.length > 0 && (
-                <section style={{ padding: "100px 40px", background: "white" }}>
-                    <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-                        <div style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "60px"
-                        }}>
+                <section className="py-28 bg-[#0d0d20]">
+                    <div className="max-w-7xl mx-auto px-6 lg:px-16">
+                        <div className="flex flex-wrap justify-between items-end gap-6 mb-16">
                             <div>
-                                <h2 style={{
-                                    fontSize: "48px",
-                                    fontWeight: "800",
-                                    color: "#1A1A2E",
-                                    marginBottom: "8px"
-                                }}>
-                                    Trending Now
-                                </h2>
-                                <p style={{ fontSize: "18px", color: "#666" }}>
-                                    Most popular products this week
-                                </p>
+                                <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">This Week</p>
+                                <h2 className="text-5xl font-black text-white mb-2">Trending Now</h2>
+                                <p className="text-slate-400 text-lg">Most popular products this week</p>
                             </div>
-                            <Link to="/products" style={{ textDecoration: "none" }}>
-                                <button style={{
-                                    padding: "14px 28px",
-                                    background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: "10px",
-                                    fontWeight: "600",
-                                    cursor: "pointer",
-                                    transition: "all 0.3s"
-                                }}>
-                                    View All →
+                            <Link to="/products">
+                                <button className="btn-primary">
+                                    View All
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                                 </button>
                             </Link>
                         </div>
 
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                            gap: "30px"
-                        }}>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
                             {featuredProducts.map(product => (
                                 <ProductCard key={product.id} product={product} />
                             ))}
@@ -373,111 +199,62 @@ export default function Home() {
                 </section>
             )}
 
-            {/* CTA Section */}
-            <section style={{
-                background: "linear-gradient(135deg, #2E2566 0%, #1A1A2E 100%)",
-                padding: "100px 40px",
-                position: "relative",
-                overflow: "hidden"
-            }}>
-                <div style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    width: "800px",
-                    height: "800px",
-                    background: "radial-gradient(circle, rgba(255,165,0,0.1), transparent 70%)",
-                    pointerEvents: "none"
-                }} />
+            {/* ── CTA ── */}
+            <section className="relative py-32 overflow-hidden bg-gradient-to-br from-[#1a0a40] via-[#0d0d2b] to-[#0a1a2e]">
+                <div className="orb orb-cta-amber" />
+                <div className="orb orb-cta-blue" />
 
-                <div style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-                    <h2 style={{
-                        fontSize: "56px",
-                        fontWeight: "800",
-                        color: "white",
-                        marginBottom: "24px"
-                    }}>
+                <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
+                    <span className="inline-block px-4 py-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-400 text-xs font-bold tracking-widest uppercase mb-8">
+                        Join Us Today
+                    </span>
+                    <h2 className="text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
                         Ready to Start Shopping?
                     </h2>
-                    <p style={{
-                        fontSize: "20px",
-                        color: "rgba(255,255,255,0.8)",
-                        marginBottom: "40px",
-                        lineHeight: "1.6"
-                    }}>
+                    <p className="text-slate-400 text-xl mb-10 leading-relaxed">
                         Join thousands of happy customers. Create your account and unlock exclusive benefits today!
                     </p>
-                    <Link to="/register" style={{ textDecoration: "none" }}>
-                        <button style={{
-                            padding: "20px 50px",
-                            fontSize: "18px",
-                            fontWeight: "700",
-                            background: "linear-gradient(135deg, #FFA500, #FF8C00)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "14px",
-                            cursor: "pointer",
-                            boxShadow: "0 15px 40px rgba(255, 165, 0, 0.5)",
-                            transition: "all 0.3s"
-                        }}
-                                onMouseEnter={(e) => {
-                                    e.target.style.transform = "translateY(-5px)";
-                                    e.target.style.boxShadow = "0 20px 50px rgba(255, 165, 0, 0.7)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.target.style.transform = "translateY(0)";
-                                    e.target.style.boxShadow = "0 15px 40px rgba(255, 165, 0, 0.5)";
-                                }}
-                        >
+                    <Link to="/register">
+                        <button className="btn-primary text-lg px-12 py-5">
                             Create Free Account
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                         </button>
                     </Link>
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer style={{
-                background: "#1A1A2E",
-                padding: "60px 40px 30px",
-                color: "white"
-            }}>
-                <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                        gap: "40px",
-                        marginBottom: "40px"
-                    }}>
+            {/* ── Footer ── */}
+            <footer className="bg-[#06060f] border-t border-white/5 pt-16 pb-8">
+                <div className="max-w-7xl mx-auto px-6 lg:px-16">
+                    <div className="grid sm:grid-cols-3 gap-12 mb-12">
                         <div>
-                            <h3 style={{ fontSize: "24px", marginBottom: "16px", fontWeight: "700" }}>
-                                🛒 Our Mall
-                            </h3>
-                            <p style={{ color: "rgba(255,255,255,0.6)", lineHeight: "1.6" }}>
-                                Your trusted destination for quality products and amazing shopping experience.
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="text-2xl">🛒</span>
+                                <span className="text-white text-xl font-black tracking-tight">Our Mall</span>
+                            </div>
+                            <p className="text-slate-500 text-sm leading-relaxed">
+                                Your trusted destination for quality products and an amazing shopping experience.
                             </p>
                         </div>
+
                         <div>
-                            <h4 style={{ marginBottom: "16px", fontWeight: "600" }}>Quick Links</h4>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                <Link to="/products" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Products</Link>
-                                <Link to="/categories" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Categories</Link>
+                            <h4 className="text-white font-semibold mb-5 text-sm uppercase tracking-widest">Quick Links</h4>
+                            <div className="flex flex-col gap-3">
+                                <Link to="/products" className="footer-link">Products</Link>
+                                <Link to="/categories" className="footer-link">Categories</Link>
                             </div>
                         </div>
+
                         <div>
-                            <h4 style={{ marginBottom: "16px", fontWeight: "600" }}>Account</h4>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                <Link to="/login" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Login</Link>
-                                <Link to="/register" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Sign Up</Link>
+                            <h4 className="text-white font-semibold mb-5 text-sm uppercase tracking-widest">Account</h4>
+                            <div className="flex flex-col gap-3">
+                                <Link to="/login" className="footer-link">Login</Link>
+                                <Link to="/register" className="footer-link">Sign Up</Link>
                             </div>
                         </div>
                     </div>
-                    <div style={{
-                        textAlign: "center",
-                        paddingTop: "30px",
-                        borderTop: "1px solid rgba(255,255,255,0.1)",
-                        color: "rgba(255,255,255,0.5)"
-                    }}>
+
+                    <div className="border-t border-white/5 pt-8 text-center text-slate-600 text-sm">
                         © 2025 Our Mall. All rights reserved.
                     </div>
                 </div>
@@ -486,219 +263,81 @@ export default function Home() {
     );
 }
 
-// Component: Stat Badge
+// ── Sub-components ──
+
 function StatBadge({ number, label }) {
     return (
         <div>
-            <div style={{
-                fontSize: "32px",
-                fontWeight: "800",
-                color: "#FFA500",
-                marginBottom: "4px"
-            }}>
-                {number}
-            </div>
-            <div style={{
-                fontSize: "14px",
-                color: "rgba(255,255,255,0.7)",
-                fontWeight: "500"
-            }}>
-                {label}
-            </div>
+            <div className="text-3xl font-black text-amber-400 mb-1">{number}</div>
+            <div className="text-slate-400 text-sm font-medium">{label}</div>
         </div>
     );
 }
 
-// Component: Feature Card
 function FeatureCard({ gradient, icon, title, description }) {
     return (
-        <div style={{
-            background: "white",
-            padding: "40px 30px",
-            borderRadius: "20px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.08)",
-            transition: "all 0.4s ease",
-            border: "1px solid #f0f0f0",
-            cursor: "pointer"
-        }}
-             onMouseEnter={(e) => {
-                 e.currentTarget.style.transform = "translateY(-10px)";
-                 e.currentTarget.style.boxShadow = "0 20px 60px rgba(0,0,0,0.15)";
-             }}
-             onMouseLeave={(e) => {
-                 e.currentTarget.style.transform = "translateY(0)";
-                 e.currentTarget.style.boxShadow = "0 10px 40px rgba(0,0,0,0.08)";
-             }}
-        >
-            <div style={{
-                width: "70px",
-                height: "70px",
-                background: gradient,
-                borderRadius: "16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "32px",
-                marginBottom: "24px",
-                boxShadow: "0 8px 20px rgba(0,0,0,0.15)"
-            }}>
+        <div className="group relative bg-white/[0.03] border border-white/10 rounded-2xl p-8 hover:border-white/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-white/5 to-transparent rounded-2xl" />
+            <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-2xl mb-6 shadow-lg`}>
                 {icon}
             </div>
-            <h3 style={{
-                fontSize: "22px",
-                fontWeight: "700",
-                color: "#1A1A2E",
-                marginBottom: "12px"
-            }}>
-                {title}
-            </h3>
-            <p style={{
-                color: "#666",
-                lineHeight: "1.6",
-                fontSize: "15px"
-            }}>
-                {description}
-            </p>
+            <h3 className="text-white text-xl font-bold mb-3">{title}</h3>
+            <p className="text-slate-400 text-sm leading-relaxed">{description}</p>
         </div>
     );
 }
 
-// Component: Category Card
 function CategoryCard({ category, index }) {
-    const gradients = [
-        "linear-gradient(135deg, #1E90FF, #4B368B)",
-        "linear-gradient(135deg, #FFA500, #FF6B6B)",
-        "linear-gradient(135deg, #4B368B, #2E2566)",
-        "linear-gradient(135deg, #1E90FF, #1A1A2E)"
+    const styles = [
+        { from: "from-blue-600", to: "to-violet-700", border: "hover:border-blue-500/40" },
+        { from: "from-amber-500", to: "to-orange-600", border: "hover:border-amber-500/40" },
+        { from: "from-violet-600", to: "to-purple-800", border: "hover:border-violet-500/40" },
+        { from: "from-cyan-500", to: "to-blue-700", border: "hover:border-cyan-500/40" },
     ];
+    const s = styles[index % styles.length];
 
     return (
-        <Link to={`/products?category=${category.id}`} style={{ textDecoration: "none" }}>
-            <div style={{
-                background: gradients[index % gradients.length],
-                padding: "50px 30px",
-                borderRadius: "20px",
-                textAlign: "center",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                position: "relative",
-                overflow: "hidden"
-            }}
-                 onMouseEnter={(e) => {
-                     e.currentTarget.style.transform = "scale(1.05)";
-                 }}
-                 onMouseLeave={(e) => {
-                     e.currentTarget.style.transform = "scale(1)";
-                 }}
-            >
-                <div style={{ fontSize: "56px", marginBottom: "16px" }}>
-                    {getCategoryIcon(category.name)}
+        <Link to={`/products?category=${category.id}`}>
+            <div className={`group relative rounded-2xl p-8 text-center border border-white/10 ${s.border} bg-white/[0.03] hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer`}>
+                <div className={`absolute inset-0 bg-gradient-to-br ${s.from} ${s.to} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+                <div className="text-5xl mb-5">{getCategoryIcon(category.name)}</div>
+                <h3 className="text-white text-xl font-bold mb-2">{category.name}</h3>
+                <p className="text-slate-400 text-sm">{category.description || "Explore collection"}</p>
+                <div className={`mt-5 inline-flex items-center gap-1 text-xs font-semibold bg-gradient-to-r ${s.from} ${s.to} bg-clip-text text-transparent`}>
+                    Shop Now
+                    <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                 </div>
-                <h3 style={{
-                    color: "white",
-                    fontSize: "24px",
-                    fontWeight: "700",
-                    marginBottom: "8px"
-                }}>
-                    {category.name}
-                </h3>
-                <p style={{
-                    color: "rgba(255,255,255,0.8)",
-                    fontSize: "14px"
-                }}>
-                    {category.description || "Explore collection"}
-                </p>
             </div>
         </Link>
     );
 }
 
-// Component: Product Card
 function ProductCard({ product }) {
     return (
-        <Link to={`/products/${product.id}`} style={{ textDecoration: "none" }}>
-            <div style={{
-                background: "white",
-                borderRadius: "20px",
-                overflow: "hidden",
-                transition: "all 0.3s ease",
-                border: "1px solid #f0f0f0",
-                cursor: "pointer"
-            }}
-                 onMouseEnter={(e) => {
-                     e.currentTarget.style.transform = "translateY(-8px)";
-                     e.currentTarget.style.boxShadow = "0 15px 50px rgba(0,0,0,0.15)";
-                 }}
-                 onMouseLeave={(e) => {
-                     e.currentTarget.style.transform = "translateY(0)";
-                     e.currentTarget.style.boxShadow = "none";
-                 }}
-            >
-                <div style={{
-                    height: "240px",
-                    background: "linear-gradient(135deg, #f5f7fa 0%, #e8ebf0 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "80px",
-                    position: "relative"
-                }}>
+        <Link to={`/products/${product.id}`}>
+            <div className="group bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 hover:-translate-y-2 hover:shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer">
+                {/* Image area */}
+                <div className="relative h-56 bg-gradient-to-br from-[#1a1040] to-[#0d0d2b] flex items-center justify-center text-7xl overflow-hidden">
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-t from-black/40 to-transparent" />
                     📦
                     {product.stock <= 10 && product.stock > 0 && (
-                        <div style={{
-                            position: "absolute",
-                            top: "16px",
-                            right: "16px",
-                            background: "#FF6B6B",
-                            color: "white",
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            fontSize: "12px",
-                            fontWeight: "600"
-                        }}>
+                        <span className="absolute top-3 right-3 bg-rose-500/90 text-white text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm">
                             Low Stock
-                        </div>
+                        </span>
                     )}
                 </div>
-                <div style={{ padding: "24px" }}>
-                    <h3 style={{
-                        fontSize: "18px",
-                        fontWeight: "600",
-                        color: "#1A1A2E",
-                        marginBottom: "8px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap"
-                    }}>
-                        {product.name}
-                    </h3>
-                    <p style={{
-                        color: "#666",
-                        fontSize: "14px",
-                        marginBottom: "16px",
-                        height: "40px",
-                        overflow: "hidden"
-                    }}>
-                        {product.description}
-                    </p>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{
-                            fontSize: "28px",
-                            fontWeight: "700",
-                            background: "linear-gradient(135deg, #FFA500, #FF6B6B)",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent"
-                        }}>
-                            ${product.price}
-                        </span>
-                        <span style={{
-                            fontSize: "13px",
-                            color: product.stock > 0 ? "#4CAF50" : "#FF6B6B",
-                            fontWeight: "600",
-                            padding: "6px 12px",
-                            background: product.stock > 0 ? "rgba(76, 175, 80, 0.1)" : "rgba(255, 107, 107, 0.1)",
-                            borderRadius: "8px"
-                        }}>
+
+                {/* Info */}
+                <div className="p-6">
+                    <h3 className="text-white text-base font-semibold truncate mb-2">{product.name}</h3>
+                    <p className="text-slate-500 text-sm mb-5 line-clamp-2 leading-relaxed">{product.description}</p>
+                    <div className="flex items-center justify-between">
+                        <span className="text-2xl font-black gradient-text-price">${product.price}</span>
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                            product.stock > 0
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                        }`}>
                             {product.stock > 0 ? `${product.stock} left` : "Sold out"}
                         </span>
                     </div>
@@ -711,14 +350,9 @@ function ProductCard({ product }) {
 // Helper
 function getCategoryIcon(name) {
     const icons = {
-        "Electronics": "💻",
-        "Clothing": "👕",
-        "Books": "📚",
-        "Food": "🍔",
-        "Toys": "🧸",
-        "Sports": "⚽",
-        "Beauty": "💄",
-        "Home": "🏠"
+        "Electronics": "💻", "Clothing": "👕", "Books": "📚",
+        "Food": "🍔", "Toys": "🧸", "Sports": "⚽",
+        "Beauty": "💄", "Home": "🏠"
     };
     for (const [key, icon] of Object.entries(icons)) {
         if (name.toLowerCase().includes(key.toLowerCase())) return icon;

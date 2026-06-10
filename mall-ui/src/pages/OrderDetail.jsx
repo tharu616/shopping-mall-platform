@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import API from "../api";
+import API from "../api/api";
 import { useAuth } from "../AuthContext";
 
 export default function OrderDetail() {
@@ -26,45 +26,32 @@ export default function OrderDetail() {
         return transitions[currentStatus] || [];
     };
 
-    const getStatusStyle = (status) => {
-        const styles = {
-            PENDING: { color: "#FFA500", bg: "rgba(255,165,0,0.1)", icon: "⏳" },
-            CONFIRMED: { color: "#1E90FF", bg: "rgba(30,144,255,0.1)", icon: "✓" },
-            PROCESSING: { color: "#4B368B", bg: "rgba(75,54,139,0.1)", icon: "⚙️" },
-            SHIPPED: { color: "#4B368B", bg: "rgba(75,54,139,0.1)", icon: "🚚" },
-            DELIVERED: { color: "#4CAF50", bg: "rgba(76,175,80,0.1)", icon: "✅" },
-            CANCELLED: { color: "#dc3545", bg: "rgba(220,53,69,0.1)", icon: "❌" }
-        };
-        return styles[status] || styles.PENDING;
+    const statusConfig = {
+        PENDING:    { color: "text-amber-400",   border: "border-amber-400/40",   bg: "bg-amber-400/10",   dot: "bg-amber-400",   icon: "⏳" },
+        CONFIRMED:  { color: "text-blue-400",    border: "border-blue-400/40",    bg: "bg-blue-400/10",    dot: "bg-blue-400",    icon: "✓"  },
+        PROCESSING: { color: "text-violet-400",  border: "border-violet-400/40",  bg: "bg-violet-400/10",  dot: "bg-violet-400",  icon: "⚙️" },
+        SHIPPED:    { color: "text-cyan-400",    border: "border-cyan-400/40",    bg: "bg-cyan-400/10",    dot: "bg-cyan-400",    icon: "🚚" },
+        DELIVERED:  { color: "text-emerald-400", border: "border-emerald-400/40", bg: "bg-emerald-400/10", dot: "bg-emerald-400", icon: "✅" },
+        CANCELLED:  { color: "text-rose-400",    border: "border-rose-400/40",    bg: "bg-rose-400/10",    dot: "bg-rose-400",    icon: "❌" },
     };
 
-    useEffect(() => {
-        fetchOrder();
-    }, [id]);
+    const getStatusCfg = (s) => statusConfig[s] || statusConfig.PENDING;
+
+    useEffect(() => { fetchOrder(); }, [id]);
 
     function fetchOrder() {
         setLoading(true);
         API.get(`/orders/${id}`)
-            .then(res => {
-                setOrder(res.data);
-                setNewStatus(res.data.status);
-            })
-            .catch((err) => {
-                console.error("Fetch error:", err);
-                setError("Order not found or access denied.");
-            })
+            .then(res => { setOrder(res.data); setNewStatus(res.data.status); })
+            .catch((err) => { console.error("Fetch error:", err); setError("Order not found or access denied."); })
             .finally(() => setLoading(false));
     }
 
-    // Validation helpers
     function validateStatusTransition(currentStatus, nextStatus) {
         if (!currentStatus || !nextStatus) return "Invalid status.";
         if (currentStatus === nextStatus) return "Please select a different status.";
-
         const validNext = getValidNextStatuses(currentStatus);
-        if (!validNext.includes(nextStatus)) {
-            return `Cannot change from ${currentStatus} to ${nextStatus}.`;
-        }
+        if (!validNext.includes(nextStatus)) return `Cannot change from ${currentStatus} to ${nextStatus}.`;
         return "";
     }
 
@@ -76,406 +63,212 @@ export default function OrderDetail() {
         return "";
     }
 
-    // Revalidate status when newStatus changes
     useEffect(() => {
-        if (order && newStatus) {
-            const err = validateStatusTransition(order.status, newStatus);
-            setStatusError(err);
-        }
+        if (order && newStatus) setStatusError(validateStatusTransition(order.status, newStatus));
     }, [newStatus, order]);
 
     async function handleStatusUpdate() {
         setUpdateMsg("");
-
         const transErr = validateStatusTransition(order.status, newStatus);
-        if (transErr) {
-            setUpdateMsg(transErr);
-            return;
-        }
-
+        if (transErr) { setUpdateMsg(transErr); return; }
         try {
             await API.patch(`/orders/${id}/status`, { status: newStatus });
             setUpdateMsg("Status updated successfully!");
             setTimeout(() => navigate("/orders"), 1000);
         } catch (err) {
             console.error("Update error:", err);
-            const errorMsg = err.response?.data?.message || err.response?.data || "Failed to update status.";
-            setUpdateMsg(`Error: ${errorMsg}`);
+            setUpdateMsg(`Error: ${err.response?.data?.message || err.response?.data || "Failed to update status."}`);
         }
     }
 
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)"
-            }}>
-                <div style={{ color: "white", fontSize: "24px", fontWeight: "600" }}>
-                    Loading order details...
-                </div>
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                <p className="text-slate-400 font-semibold">Loading order details...</p>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (error) {
-        return (
-            <div style={{
-                minHeight: "100vh",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #1E90FF 0%, #4B368B 100%)"
-            }}>
-                <div style={{
-                    background: "rgba(220,53,69,0.2)",
-                    backdropFilter: "blur(20px)",
-                    padding: "40px 60px",
-                    borderRadius: "20px",
-                    textAlign: "center",
-                    border: "2px solid #dc3545"
-                }}>
-                    <div style={{ fontSize: "64px", marginBottom: "20px" }}>⚠️</div>
-                    <h2 style={{ color: "white", marginBottom: "20px" }}>{error}</h2>
-                    <Link to="/orders">
-                        <button style={{
-                            padding: "12px 30px",
-                            background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "10px",
-                            fontWeight: "600",
-                            cursor: "pointer"
-                        }}>
-                            ← Back to Orders
-                        </button>
-                    </Link>
-                </div>
+    if (error) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a1a] px-4 relative overflow-hidden">
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+            <div className="relative z-10 glass-card max-w-sm w-full text-center py-12">
+                <div className="text-5xl mb-4">⚠️</div>
+                <h2 className="text-white text-xl font-black mb-2">Error</h2>
+                <p className="text-rose-400 text-sm mb-6">{error}</p>
+                <Link to="/orders">
+                    <button className="btn-primary justify-center w-full">← Back to Orders</button>
+                </Link>
             </div>
-        );
-    }
+        </div>
+    );
 
     if (!order) return null;
 
     const validStatuses = getValidNextStatuses(order.status);
-    const statusStyle = getStatusStyle(order.status);
+    const sc = getStatusCfg(order.status);
     const orderDataErr = validateOrderData(order);
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: "linear-gradient(135deg, #f8f9fa 0%, #e8ebf0 100%)",
-            padding: "60px 20px"
-        }}>
-            <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-                {/* Breadcrumb */}
-                <div style={{ marginBottom: "30px" }}>
-                    <Link to="/orders" style={{
-                        color: "#1E90FF",
-                        textDecoration: "none",
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "8px"
-                    }}>
-                        ← Back to Orders
-                    </Link>
-                </div>
+        <div className="min-h-screen bg-[#0a0a1a] px-4 py-16 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-violet-600/8 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px] pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
+
+            <div className="relative z-10 max-w-4xl mx-auto">
+
+                {/* Back */}
+                <Link to="/orders" className="inline-flex items-center gap-2 px-5 py-2.5 mb-10 rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/20 text-sm font-semibold transition-all no-underline">
+                    ← Back to Orders
+                </Link>
 
                 {/* Header */}
-                <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "30px"
-                }}>
-                    <h1 style={{
-                        fontSize: "36px",
-                        fontWeight: "800",
-                        color: "#1A1A2E"
-                    }}>
-                        Order #{order.id}
-                    </h1>
-
-                    <div style={{
-                        padding: "12px 24px",
-                        background: statusStyle.bg,
-                        borderRadius: "12px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        border: `2px solid ${statusStyle.color}`
-                    }}>
-                        <span style={{ fontSize: "20px" }}>{statusStyle.icon}</span>
-                        <span style={{
-                            fontWeight: "700",
-                            color: statusStyle.color,
-                            fontSize: "16px"
-                        }}>
-                            {order.status}
-                        </span>
+                <div className="flex items-center justify-between flex-wrap gap-4 mb-10">
+                    <div>
+                        <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-2">Order Details</p>
+                        <h1 className="text-4xl font-black text-white tracking-tight">Order #{order.id}</h1>
+                    </div>
+                    <div className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border ${sc.bg} ${sc.border}`}>
+                        <span className={`w-2 h-2 rounded-full ${sc.dot} animate-pulse`} />
+                        <span className={`font-black text-sm ${sc.color}`}>{sc.icon} {order.status}</span>
                     </div>
                 </div>
 
-                {/* Global order data validation error */}
+                {/* Data validation error */}
                 {orderDataErr && (
-                    <div style={{
-                        marginBottom: "24px",
-                        padding: "16px",
-                        background: "rgba(220,53,69,0.1)",
-                        border: "2px solid #dc3545",
-                        borderRadius: "12px",
-                        color: "#dc3545",
-                        fontWeight: "600"
-                    }}>
-                        ⚠️ {orderDataErr}
+                    <div className="flex items-center gap-3 p-4 mb-6 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-sm font-medium">
+                        <span>⚠️</span> {orderDataErr}
                     </div>
                 )}
 
-                {/* Order Info Card - Glassmorphism */}
-                <div style={{
-                    background: "rgba(255, 255, 255, 0.8)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: "20px",
-                    padding: "30px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                    marginBottom: "24px"
-                }}>
-                    <h3 style={{
-                        fontSize: "20px",
-                        fontWeight: "800",
-                        color: "#1A1A2E",
-                        marginBottom: "20px"
-                    }}>
+                {/* Order Info */}
+                <div className="glass-card mb-6">
+                    <h3 className="text-white font-black mb-7 flex items-center gap-3">
+                        <span className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center text-base">📋</span>
                         Order Information
                     </h3>
 
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                        gap: "20px"
-                    }}>
-                        <InfoItem label="Total Amount" value={`$${order.total}`} gradient={true} />
-                        <InfoItem label="User Email" value={order.userEmail} />
-                        <InfoItem label="Created Date" value={order.createdAt ? new Date(order.createdAt).toLocaleString() : "N/A"} />
+                    <div className="grid sm:grid-cols-3 gap-6 mb-6">
+                        <InfoItem label="Total Amount"  value={`$${order.total}`}           gradient />
+                        <InfoItem label="Customer Email" value={order.userEmail}            />
+                        <InfoItem label="Placed On"     value={order.createdAt ? new Date(order.createdAt).toLocaleString() : "N/A"} />
                     </div>
 
                     {order.shippingAddress && (
-                        <div style={{
-                            marginTop: "20px",
-                            padding: "16px",
-                            background: "rgba(30,144,255,0.05)",
-                            borderRadius: "12px",
-                            border: "1px solid rgba(30,144,255,0.1)"
-                        }}>
-                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#666", marginBottom: "8px" }}>
-                                Shipping Address:
-                            </div>
-                            <div style={{ color: "#1A1A2E", lineHeight: "1.6" }}>
-                                {order.shippingAddress}
-                            </div>
+                        <div className="p-4 bg-blue-500/[0.04] border border-blue-500/15 rounded-xl">
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">Shipping Address</p>
+                            <p className="text-slate-300 text-sm leading-relaxed">{order.shippingAddress}</p>
                         </div>
                     )}
                 </div>
 
-                {/* Items Table - Glassmorphism */}
-                <div style={{
-                    background: "rgba(255, 255, 255, 0.8)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: "20px",
-                    padding: "30px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                    marginBottom: "24px",
-                    overflowX: "auto"
-                }}>
-                    <h3 style={{
-                        fontSize: "20px",
-                        fontWeight: "800",
-                        color: "#1A1A2E",
-                        marginBottom: "20px"
-                    }}>
-                        Order Items ({order.items?.length || 0})
+                {/* Items */}
+                <div className="glass-card mb-6 overflow-x-auto">
+                    <h3 className="text-white font-black mb-6 flex items-center gap-3">
+                        <span className="w-9 h-9 rounded-xl bg-amber-400/15 flex items-center justify-center text-base">📦</span>
+                        Order Items
+                        <span className="px-2.5 py-0.5 bg-white/5 border border-white/10 text-slate-400 text-xs font-bold rounded-full">
+                            {order.items?.length || 0}
+                        </span>
                     </h3>
 
                     {order.items && order.items.length > 0 ? (
-                        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 12px" }}>
-                            <thead>
-                            <tr>
-                                <th style={tableHeaderStyle}>Product</th>
-                                <th style={tableHeaderStyle}>SKU</th>
-                                <th style={{...tableHeaderStyle, textAlign: "right"}}>Price</th>
-                                <th style={{...tableHeaderStyle, textAlign: "center"}}>Qty</th>
-                                <th style={{...tableHeaderStyle, textAlign: "right"}}>Total</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {order.items.map(item => (
-                                <tr key={item.id} style={{
-                                    background: "rgba(30,144,255,0.03)",
-                                    transition: "all 0.3s"
-                                }}>
-                                    <td style={tableCellStyle}>
-                                        <strong style={{ color: "#1A1A2E" }}>{item.name}</strong>
-                                    </td>
-                                    <td style={tableCellStyle}>
-                                        <span style={{ color: "#666", fontSize: "14px" }}>{item.sku}</span>
-                                    </td>
-                                    <td style={{...tableCellStyle, textAlign: "right"}}>
-                                        ${item.price}
-                                    </td>
-                                    <td style={{...tableCellStyle, textAlign: "center"}}>
-                                        <span style={{
-                                            padding: "4px 12px",
-                                            background: "rgba(30,144,255,0.1)",
-                                            borderRadius: "8px",
-                                            fontWeight: "700",
-                                            color: "#1E90FF"
-                                        }}>
-                                            {item.quantity}
-                                        </span>
-                                    </td>
-                                    <td style={{...tableCellStyle, textAlign: "right"}}>
-                                        <strong style={{
-                                            fontSize: "16px",
-                                            background: "linear-gradient(135deg, #FFA500, #FF6B6B)",
-                                            WebkitBackgroundClip: "text",
-                                            WebkitTextFillColor: "transparent"
-                                        }}>
-                                            ${item.lineTotal}
-                                        </strong>
-                                    </td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
-                            No items in this order
+                        <div className="min-w-[560px]">
+                            {/* Table header */}
+                            <div className="grid grid-cols-[1fr_100px_80px_72px_100px] gap-3 px-4 pb-3 border-b border-white/8">
+                                {["Product", "SKU", "Price", "Qty", "Total"].map((h, i) => (
+                                    <p key={h} className={`text-slate-600 text-xs font-bold uppercase tracking-widest ${i > 1 ? "text-right" : ""}`}>{h}</p>
+                                ))}
+                            </div>
+
+                            <div className="flex flex-col gap-2 mt-3">
+                                {order.items.map(item => (
+                                    <div key={item.id} className="grid grid-cols-[1fr_100px_80px_72px_100px] gap-3 px-4 py-3.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/8 rounded-xl transition-all items-center">
+                                        <p className="text-white font-bold text-sm">{item.name}</p>
+                                        <p className="text-slate-500 text-xs">{item.sku}</p>
+                                        <p className="text-slate-300 text-sm text-right">${item.price}</p>
+                                        <div className="flex justify-end">
+                                            <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black rounded-full">
+                                                ×{item.quantity}
+                                            </span>
+                                        </div>
+                                        <p className="text-right font-black text-sm gradient-text-price">${item.lineTotal}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
+                    ) : (
+                        <div className="text-center py-10 text-slate-600">No items in this order</div>
                     )}
                 </div>
 
-                {/* Admin/Vendor Status Update - Glassmorphism */}
+                {/* Status Update – Admin/Vendor */}
                 {(role === "ADMIN" || role === "VENDOR") && validStatuses.length > 0 && (
-                    <div style={{
-                        background: "linear-gradient(135deg, rgba(76,175,80,0.1), rgba(30,144,255,0.1))",
-                        backdropFilter: "blur(20px)",
-                        WebkitBackdropFilter: "blur(20px)",
-                        border: statusError ? "2px solid #dc3545" : "2px solid #4CAF50",
-                        borderRadius: "20px",
-                        padding: "30px",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
-                    }}>
-                        <h3 style={{
-                            fontSize: "20px",
-                            fontWeight: "800",
-                            color: "#1A1A2E",
-                            marginBottom: "12px"
-                        }}>
-                            🔄 Update Order Status
+                    <div className={`p-6 rounded-2xl border transition-all ${
+                        statusError ? "border-rose-500/40 bg-rose-500/[0.03]" : "border-emerald-500/25 bg-emerald-500/[0.03]"
+                    }`}>
+                        <h3 className="text-white font-black mb-1 flex items-center gap-3">
+                            <span className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center text-base">🔄</span>
+                            Update Order Status
                         </h3>
-                        <p style={{ fontSize: "14px", color: "#666", marginBottom: "20px" }}>
-                            Current status: <strong style={{ color: statusStyle.color }}>{order.status}</strong>
+                        <p className="text-slate-500 text-xs ml-12 mb-6">
+                            Current: <span className={`font-black ${sc.color}`}>{order.status}</span>
                         </p>
 
-                        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                        <div className="flex flex-wrap gap-3 items-center">
                             <select
                                 value={newStatus}
                                 onChange={(e) => setNewStatus(e.target.value)}
-                                style={{
-                                    padding: "14px 18px",
-                                    fontSize: "15px",
-                                    borderRadius: "12px",
-                                    border: statusError ? "2px solid #dc3545" : "2px solid rgba(255,255,255,0.3)",
-                                    background: "rgba(255,255,255,0.7)",
-                                    fontWeight: "600",
-                                    flex: "1",
-                                    minWidth: "200px",
-                                    outline: "none",
-                                    cursor: "pointer"
-                                }}
+                                className={`flex-1 min-w-[200px] px-4 py-3 rounded-xl border text-white text-sm font-bold outline-none transition-all [color-scheme:dark] ${
+                                    statusError
+                                        ? "border-rose-500/60 bg-rose-500/5"
+                                        : "border-white/10 bg-white/5 focus:border-emerald-400/50"
+                                }`}
                             >
                                 <option value={order.status}>{order.status} (current)</option>
-                                {validStatuses.map(status => (
-                                    <option key={status} value={status}>{status}</option>
-                                ))}
+                                {validStatuses.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
 
                             <button
                                 onClick={handleStatusUpdate}
                                 disabled={newStatus === order.status || !!statusError}
-                                style={{
-                                    padding: "14px 32px",
-                                    fontSize: "16px",
-                                    background: (newStatus === order.status || statusError)
-                                        ? "#ccc"
-                                        : "linear-gradient(135deg, #4CAF50, #45a049)",
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: "12px",
-                                    cursor: (newStatus === order.status || statusError) ? "not-allowed" : "pointer",
-                                    fontWeight: "700",
-                                    boxShadow: (newStatus === order.status || statusError)
-                                        ? "none"
-                                        : "0 4px 15px rgba(76,175,80,0.3)",
-                                    transition: "all 0.3s"
-                                }}
                                 title={statusError || "Update order status"}
+                                className={`px-8 py-3 rounded-xl font-black text-sm text-white transition-all ${
+                                    newStatus === order.status || statusError
+                                        ? "bg-white/5 border border-white/8 text-slate-600 cursor-not-allowed"
+                                        : "bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-300"
+                                }`}
                             >
                                 Update Status
                             </button>
                         </div>
 
-                        {/* Inline status validation error */}
                         {statusError && (
-                            <p style={{ color: "#dc3545", fontSize: 14, marginTop: 12 }}>
-                                {statusError}
+                            <p className="text-rose-400 text-xs font-semibold mt-3 flex items-center gap-1">
+                                <span>⚠️</span> {statusError}
                             </p>
                         )}
 
                         {updateMsg && (
-                            <div style={{
-                                marginTop: "16px",
-                                padding: "14px 18px",
-                                background: updateMsg.includes("successfully")
-                                    ? "rgba(76,175,80,0.2)"
-                                    : "rgba(220,53,69,0.2)",
-                                color: updateMsg.includes("successfully") ? "#4CAF50" : "#dc3545",
-                                borderRadius: "12px",
-                                fontWeight: "600",
-                                border: `2px solid ${updateMsg.includes("successfully") ? "#4CAF50" : "#dc3545"}`
-                            }}>
-                                {updateMsg}
+                            <div className={`flex items-center gap-2 mt-4 p-3 rounded-xl border text-sm font-semibold ${
+                                updateMsg.includes("successfully")
+                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                                    : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                            }`}>
+                                {updateMsg.includes("successfully") ? "✅" : "⚠️"} {updateMsg}
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Note for completed orders */}
+                {/* Terminal status note */}
                 {(role === "ADMIN" || role === "VENDOR") && validStatuses.length === 0 && (
-                    <div style={{
-                        padding: "20px",
-                        background: "rgba(255,193,7,0.1)",
-                        border: "2px solid #FFA500",
-                        borderRadius: "16px",
-                        color: "#856404",
-                        fontWeight: "600",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px"
-                    }}>
-                        <span style={{ fontSize: "24px" }}>ℹ️</span>
-                        <span>
-                            This order is <strong>{order.status}</strong> and cannot be updated further.
-                        </span>
+                    <div className="flex items-center gap-4 p-5 bg-amber-400/[0.05] border border-amber-400/20 rounded-2xl">
+                        <span className="text-2xl flex-shrink-0">ℹ️</span>
+                        <p className="text-amber-300 text-sm font-semibold">
+                            This order is <span className="font-black">{order.status}</span> and cannot be updated further.
+                        </p>
                     </div>
                 )}
             </div>
@@ -483,41 +276,9 @@ export default function OrderDetail() {
     );
 }
 
-// Helper Components
 const InfoItem = ({ label, value, gradient = false }) => (
     <div>
-        <div style={{ fontSize: "12px", color: "#666", fontWeight: "600", marginBottom: "6px", textTransform: "uppercase" }}>
-            {label}
-        </div>
-        <div style={{
-            fontSize: "18px",
-            fontWeight: "700",
-            ...(gradient ? {
-                background: "linear-gradient(135deg, #FFA500, #FF6B6B)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent"
-            } : {
-                color: "#1A1A2E"
-            })
-        }}>
-            {value}
-        </div>
+        <p className="text-slate-600 text-xs font-bold uppercase tracking-widest mb-2">{label}</p>
+        <p className={`text-lg font-black ${gradient ? "gradient-text-price" : "text-white"}`}>{value}</p>
     </div>
 );
-
-const tableHeaderStyle = {
-    padding: "12px 16px",
-    textAlign: "left",
-    fontSize: "12px",
-    fontWeight: "700",
-    color: "#666",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px"
-};
-
-const tableCellStyle = {
-    padding: "16px",
-    borderRadius: "8px",
-    fontSize: "15px",
-    color: "#1A1A2E"
-};

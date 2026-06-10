@@ -1,106 +1,40 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api";
+import API from "../api/api";
 
 export default function ProductForm() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-
-    // ✅ ADD: Field-level errors
     const [errors, setErrors] = useState({});
-
     const [form, setForm] = useState({
-        sku: "",
-        name: "",
-        description: "",
-        price: "",
-        stock: "",
-        active: true
+        sku: "", name: "", description: "", price: "", stock: "", active: true
     });
 
-    // ✅ ADD: Validation function
     function validateProduct() {
         const newErrors = {};
-
-        // SKU validation
-        if (!form.sku.trim()) {
-            newErrors.sku = "SKU is required";
-        } else if (form.sku.length < 3) {
-            newErrors.sku = "SKU must be at least 3 characters";
-        } else if (form.sku.length > 64) {
-            newErrors.sku = "SKU cannot exceed 64 characters";
-        } else if (!/^[A-Z0-9-_]+$/i.test(form.sku)) {
-            newErrors.sku = "SKU can only contain letters, numbers, hyphens, and underscores";
-        }
-
-        // Name validation
-        if (!form.name.trim()) {
-            newErrors.name = "Product name is required";
-        } else if (form.name.trim().length < 3) {
-            newErrors.name = "Product name must be at least 3 characters";
-        } else if (form.name.length > 255) {
-            newErrors.name = "Product name cannot exceed 255 characters";
-        }
-
-        // Description validation
-        if (form.description && form.description.length > 5000) {
-            newErrors.description = "Description cannot exceed 5000 characters";
-        }
-
-        // Price validation
-        if (!form.price) {
-            newErrors.price = "Price is required";
-        } else {
-            const price = parseFloat(form.price);
-            if (isNaN(price)) {
-                newErrors.price = "Price must be a valid number";
-            } else if (price <= 0) {
-                newErrors.price = "Price must be greater than 0";
-            } else if (price > 999999) {
-                newErrors.price = "Price cannot exceed 999,999";
-            }
-        }
-
-        // Stock validation
-        if (form.stock === "" || form.stock === null) {
-            newErrors.stock = "Stock quantity is required";
-        } else {
-            const stock = parseInt(form.stock);
-            if (isNaN(stock)) {
-                newErrors.stock = "Stock must be a valid number";
-            } else if (!Number.isInteger(parseFloat(form.stock))) {
-                newErrors.stock = "Stock must be a whole number";
-            } else if (stock < 0) {
-                newErrors.stock = "Stock cannot be negative";
-            } else if (stock > 999999) {
-                newErrors.stock = "Stock cannot exceed 999,999";
-            }
-        }
-
+        if (!form.sku.trim()) newErrors.sku = "SKU is required";
+        else if (form.sku.length < 3) newErrors.sku = "SKU must be at least 3 characters";
+        else if (form.sku.length > 64) newErrors.sku = "SKU cannot exceed 64 characters";
+        else if (!/^[A-Z0-9-_]+$/i.test(form.sku)) newErrors.sku = "SKU can only contain letters, numbers, hyphens, and underscores";
+        if (!form.name.trim()) newErrors.name = "Product name is required";
+        else if (form.name.trim().length < 3) newErrors.name = "Product name must be at least 3 characters";
+        else if (form.name.length > 255) newErrors.name = "Product name cannot exceed 255 characters";
+        if (form.description && form.description.length > 5000) newErrors.description = "Description cannot exceed 5000 characters";
+        if (!form.price) newErrors.price = "Price is required";
+        else { const p = parseFloat(form.price); if (isNaN(p)) newErrors.price = "Price must be a valid number"; else if (p <= 0) newErrors.price = "Price must be greater than 0"; else if (p > 999999) newErrors.price = "Price cannot exceed 999,999"; }
+        if (form.stock === "" || form.stock === null) newErrors.stock = "Stock quantity is required";
+        else { const s = parseInt(form.stock); if (isNaN(s)) newErrors.stock = "Stock must be a valid number"; else if (!Number.isInteger(parseFloat(form.stock))) newErrors.stock = "Stock must be a whole number"; else if (s < 0) newErrors.stock = "Stock cannot be negative"; else if (s > 999999) newErrors.stock = "Stock cannot exceed 999,999"; }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     }
 
-    // ✅ UPDATE: Add validation before submit
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Validate before submission
-        if (!validateProduct()) {
-            setError("Please fix the errors before submitting");
-            return;
-        }
-
-        setLoading(true);
-        setError("");
-
+        if (!validateProduct()) { setError("Please fix the errors before submitting"); return; }
+        setLoading(true); setError("");
         try {
-            const data = {
-                ...form,
-                price: parseFloat(form.price),
-                stock: parseInt(form.stock)
-            };
+            const data = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock) };
             await API.post("/products", data);
             alert("✓ Product created successfully!");
             navigate("/products");
@@ -110,221 +44,156 @@ export default function ProductForm() {
         setLoading(false);
     };
 
-    // ✅ ADD: Clear field error on change
     function handleFieldChange(e) {
         const { name, value, type, checked } = e.target;
-        const newValue = type === "checkbox" ? checked : value;
-
-        setForm(prev => ({ ...prev, [name]: newValue }));
-
-        // Clear error for this field
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: "" }));
-        }
+        setForm(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
     }
 
+    const inputClass = (field) =>
+        `w-full px-4 py-3 rounded-xl border ${errors[field] ? "border-rose-500/60 bg-rose-500/5" : "border-white/10 bg-white/5"} text-white placeholder-slate-500 text-sm outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all`;
+
     return (
-        <div style={{ maxWidth: 800, margin: "2rem auto", padding: "0 1rem" }}>
-            <div style={{ background: "white", borderRadius: 12, padding: "2rem", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-                <h2 style={{ marginBottom: "1.5rem", color: "#1a1a1a" }}>➕ Add New Product</h2>
+        <div className="min-h-screen bg-[#0a0a1a] px-4 py-16 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-violet-600/8 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px] pointer-events-none" />
+            <div className="absolute inset-0 grid-overlay pointer-events-none" />
 
-                {error && (
-                    <div style={{ padding: 16, marginBottom: 20, background: "#fee", border: "1px solid #fcc", borderRadius: 8, color: "#c33" }}>
-                        {error}
-                    </div>
-                )}
+            <div className="relative z-10 max-w-2xl mx-auto">
 
-                <form onSubmit={handleSubmit}>
-                    {/* SKU */}
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#333" }}>
-                            SKU <span style={{ color: "red" }}>*</span>
-                        </label>
-                        <input
-                            type="text"
-                            name="sku"
-                            value={form.sku}
-                            onChange={handleFieldChange}
-                            placeholder="e.g., PROD-001"
-                            style={{
-                                width: "100%",
-                                padding: 12,
-                                border: errors.sku ? "1px solid #dc3545" : "1px solid #ddd",
-                                borderRadius: 8,
-                                fontSize: 14
-                            }}
-                        />
-                        {errors.sku && (
-                            <div style={{ color: "#dc3545", fontSize: 12, marginTop: 4 }}>
-                                {errors.sku}
-                            </div>
-                        )}
-                    </div>
+                {/* Page title */}
+                <div className="mb-10">
+                    <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-3">Inventory</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight">Add New Product</h1>
+                    <p className="text-slate-400 text-sm mt-2">Fill in the details below to list a new product</p>
+                </div>
 
-                    {/* Name */}
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#333" }}>
-                            Product Name <span style={{ color: "red" }}>*</span>
-                        </label>
-                        <input
-                            type="text"
-                            name="name"
-                            value={form.name}
-                            onChange={handleFieldChange}
-                            placeholder="e.g., Wireless Mouse"
-                            style={{
-                                width: "100%",
-                                padding: 12,
-                                border: errors.name ? "1px solid #dc3545" : "1px solid #ddd",
-                                borderRadius: 8,
-                                fontSize: 14
-                            }}
-                        />
-                        {errors.name && (
-                            <div style={{ color: "#dc3545", fontSize: 12, marginTop: 4 }}>
-                                {errors.name}
-                            </div>
-                        )}
-                    </div>
+                <div className="glass-card">
 
-                    {/* Description */}
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#333" }}>
-                            Description
-                        </label>
-                        <textarea
-                            name="description"
-                            value={form.description}
-                            onChange={handleFieldChange}
-                            rows={4}
-                            placeholder="Product description..."
-                            style={{
-                                width: "100%",
-                                padding: 12,
-                                border: errors.description ? "1px solid #dc3545" : "1px solid #ddd",
-                                borderRadius: 8,
-                                fontSize: 14,
-                                fontFamily: "inherit"
-                            }}
-                        />
-                        <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                            {form.description?.length || 0} / 5000 characters
+                    {/* Global error */}
+                    {error && (
+                        <div className="flex items-center gap-3 p-4 mb-6 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm font-medium">
+                            <span>⚠️</span> {error}
                         </div>
-                        {errors.description && (
-                            <div style={{ color: "#dc3545", fontSize: 12, marginTop: 4 }}>
-                                {errors.description}
-                            </div>
-                        )}
-                    </div>
+                    )}
 
-                    {/* Price */}
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#333" }}>
-                            Price <span style={{ color: "red" }}>*</span>
-                        </label>
-                        <input
-                            type="number"
-                            name="price"
-                            value={form.price}
-                            onChange={handleFieldChange}
-                            step="0.01"
-                            min="0.01"
-                            placeholder="e.g., 29.99"
-                            style={{
-                                width: "100%",
-                                padding: 12,
-                                border: errors.price ? "1px solid #dc3545" : "1px solid #ddd",
-                                borderRadius: 8,
-                                fontSize: 14
-                            }}
-                        />
-                        {errors.price && (
-                            <div style={{ color: "#dc3545", fontSize: 12, marginTop: 4 }}>
-                                {errors.price}
-                            </div>
-                        )}
-                    </div>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-                    {/* Stock */}
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#333" }}>
-                            Stock Quantity <span style={{ color: "red" }}>*</span>
-                        </label>
-                        <input
-                            type="number"
-                            name="stock"
-                            value={form.stock}
-                            onChange={handleFieldChange}
-                            min="0"
-                            step="1"
-                            placeholder="e.g., 100"
-                            style={{
-                                width: "100%",
-                                padding: 12,
-                                border: errors.stock ? "1px solid #dc3545" : "1px solid #ddd",
-                                borderRadius: 8,
-                                fontSize: 14
-                            }}
-                        />
-                        {errors.stock && (
-                            <div style={{ color: "#dc3545", fontSize: 12, marginTop: 4 }}>
-                                {errors.stock}
+                        {/* SKU + Name side by side */}
+                        <div className="grid sm:grid-cols-2 gap-5">
+                            <div>
+                                <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                    SKU <span className="text-rose-400">*</span>
+                                </label>
+                                <input type="text" name="sku" value={form.sku} onChange={handleFieldChange} placeholder="e.g. PROD-001" className={inputClass("sku")} />
+                                {errors.sku && <p className="text-rose-400 text-xs mt-2">{errors.sku}</p>}
                             </div>
-                        )}
-                    </div>
+                            <div>
+                                <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                    Product Name <span className="text-rose-400">*</span>
+                                </label>
+                                <input type="text" name="name" value={form.name} onChange={handleFieldChange} placeholder="e.g. Wireless Mouse" className={inputClass("name")} />
+                                {errors.name && <p className="text-rose-400 text-xs mt-2">{errors.name}</p>}
+                            </div>
+                        </div>
 
-                    {/* Active */}
-                    <div style={{ marginBottom: 24 }}>
-                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                            <input
-                                type="checkbox"
-                                name="active"
-                                checked={form.active}
+                        {/* Description */}
+                        <div>
+                            <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">Description</label>
+                            <textarea
+                                name="description"
+                                value={form.description}
                                 onChange={handleFieldChange}
-                                style={{ width: 18, height: 18, cursor: "pointer" }}
+                                rows={4}
+                                placeholder="Describe your product..."
+                                className={`${inputClass("description")} resize-none`}
                             />
-                            <span style={{ color: "#333", fontSize: 14 }}>
-                                Active (visible to customers)
-                            </span>
-                        </label>
-                    </div>
+                            <div className="flex justify-between mt-2">
+                                {errors.description
+                                    ? <p className="text-rose-400 text-xs">{errors.description}</p>
+                                    : <span />
+                                }
+                                <span className={`text-xs ${(form.description?.length || 0) > 4800 ? "text-amber-400" : "text-slate-600"}`}>
+                                    {form.description?.length || 0} / 5000
+                                </span>
+                            </div>
+                        </div>
 
-                    {/* Submit Button */}
-                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                        <button
-                            type="button"
-                            onClick={() => navigate("/products")}
-                            style={{
-                                padding: "12px 24px",
-                                backgroundColor: "#6c757d",
-                                color: "white",
-                                border: "none",
-                                borderRadius: 8,
-                                cursor: "pointer",
-                                fontSize: 14,
-                                fontWeight: 600
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            style={{
-                                padding: "12px 24px",
-                                backgroundColor: loading ? "#ccc" : "#007bff",
-                                color: "white",
-                                border: "none",
-                                borderRadius: 8,
-                                cursor: loading ? "not-allowed" : "pointer",
-                                fontSize: 14,
-                                fontWeight: 600
-                            }}
-                        >
-                            {loading ? "Creating..." : "Create Product"}
-                        </button>
-                    </div>
-                </form>
+                        {/* Price + Stock */}
+                        <div className="grid sm:grid-cols-2 gap-5">
+                            <div>
+                                <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                    Price <span className="text-rose-400">*</span>
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">$</span>
+                                    <input type="number" name="price" value={form.price} onChange={handleFieldChange} step="0.01" min="0.01" placeholder="29.99" className={`${inputClass("price")} pl-8`} />
+                                </div>
+                                {errors.price && <p className="text-rose-400 text-xs mt-2">{errors.price}</p>}
+                            </div>
+                            <div>
+                                <label className="block text-white text-xs font-bold uppercase tracking-widest mb-2">
+                                    Stock Quantity <span className="text-rose-400">*</span>
+                                </label>
+                                <input type="number" name="stock" value={form.stock} onChange={handleFieldChange} min="0" step="1" placeholder="100" className={inputClass("stock")} />
+                                {errors.stock && <p className="text-rose-400 text-xs mt-2">{errors.stock}</p>}
+                            </div>
+                        </div>
+
+                        {/* Active toggle */}
+                        <label className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.02] cursor-pointer hover:border-white/20 transition-colors group">
+                            <div className="relative">
+                                <input
+                                    type="checkbox"
+                                    name="active"
+                                    checked={form.active}
+                                    onChange={handleFieldChange}
+                                    className="sr-only"
+                                />
+                                <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${form.active ? "bg-amber-400" : "bg-white/10"}`}>
+                                    <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 mt-0.5 ${form.active ? "translate-x-5.5 ml-0.5" : "translate-x-0.5"}`} />
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-white text-sm font-semibold">Active listing</p>
+                                <p className="text-slate-500 text-xs">Visible to customers in the store</p>
+                            </div>
+                        </label>
+
+                        {/* Divider */}
+                        <div className="h-px bg-white/10" />
+
+                        {/* Actions */}
+                        <div className="flex gap-4 justify-end">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/products")}
+                                className="btn-ghost px-6 py-3"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={`btn-primary px-8 py-3 ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    <>
+                                        Create Product
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

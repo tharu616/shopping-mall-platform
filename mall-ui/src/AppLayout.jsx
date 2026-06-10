@@ -1,8 +1,9 @@
+// src/AppLayout.jsx
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "./AuthContext";  // ✅ Must match exactly
 
 export default function AppLayout({ children }) {
-    const { token, role, logout } = useAuth();
+    const { token, role, logout } = useAuth();  // ✅ Now safe
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -24,7 +25,7 @@ export default function AppLayout({ children }) {
                 top: 0,
                 zIndex: 1000
             }}>
-                {/* Left Side - Logo & Main Links */}
+                {/* Left Side */}
                 <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
                     <Link to="/" style={{
                         color: "#fff",
@@ -46,21 +47,16 @@ export default function AppLayout({ children }) {
                                 padding: "8px 16px",
                                 borderRadius: "8px",
                                 background: "linear-gradient(135deg, #1E90FF, #4B368B)",
-                                fontWeight: "600",
-                                transition: "all 0.3s"
+                                fontWeight: "600"
                             }}>
                                 📊 Dashboard
                             </Link>
-                            <Link to="/products" style={{
-                                color: "#fff",
-                                textDecoration: "none",
-                                fontWeight: "500",
-                                transition: "color 0.3s"
-                            }}>
+
+                            <Link to="/products" style={{ color: "#fff", textDecoration: "none", fontWeight: "500" }}>
                                 Products
                             </Link>
 
-                            {/* Customer-only links */}
+                            {/* CUSTOMER links */}
                             {role === "CUSTOMER" && (
                                 <>
                                     <Link to="/cart" style={{ color: "#fff", textDecoration: "none", fontWeight: "500" }}>
@@ -75,7 +71,7 @@ export default function AppLayout({ children }) {
                                 </>
                             )}
 
-                            {/* Vendor links */}
+                            {/* VENDOR links */}
                             {role === "VENDOR" && (
                                 <>
                                     <Link to="/orders" style={{ color: "#fff", textDecoration: "none", fontWeight: "500" }}>
@@ -87,7 +83,7 @@ export default function AppLayout({ children }) {
                                 </>
                             )}
 
-                            {/* Admin links */}
+                            {/* ADMIN links */}
                             {role === "ADMIN" && (
                                 <>
                                     <Link to="/orders" style={{ color: "#fff", textDecoration: "none", fontWeight: "500" }}>
@@ -111,41 +107,33 @@ export default function AppLayout({ children }) {
                     )}
                 </div>
 
-                {/* Right Side - Profile & Auth */}
+                {/* Right Side */}
                 <div>
                     {token ? (
                         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                            <Link to="/profile" style={{
-                                color: "#fff",
-                                textDecoration: "none",
-                                fontWeight: "500"
-                            }}>
+                            <Link to="/profile" style={{ color: "#fff", textDecoration: "none", fontWeight: "500" }}>
                                 Profile
                             </Link>
                             <span style={{
                                 fontSize: "12px",
-                                backgroundColor: role === "ADMIN" ? "#dc3545" :
+                                backgroundColor:
+                                    role === "ADMIN" ? "#dc3545" :
                                     role === "VENDOR" ? "#28a745" : "#1E90FF",
                                 padding: "6px 14px",
                                 borderRadius: "20px",
-                                fontWeight: "700",
-                                letterSpacing: "0.5px"
+                                fontWeight: "700"
                             }}>
                                 {role}
                             </span>
-                            <button
-                                onClick={handleLogout}
-                                style={{
-                                    padding: "8px 20px",
-                                    backgroundColor: "#dc3545",
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    cursor: "pointer",
-                                    fontWeight: "600",
-                                    transition: "all 0.3s"
-                                }}
-                            >
+                            <button onClick={handleLogout} style={{
+                                padding: "8px 20px",
+                                backgroundColor: "#dc3545",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                fontWeight: "600"
+                            }}>
                                 Logout
                             </button>
                         </div>
@@ -159,8 +147,7 @@ export default function AppLayout({ children }) {
                                     border: "2px solid rgba(255,255,255,0.3)",
                                     borderRadius: "8px",
                                     cursor: "pointer",
-                                    fontWeight: "600",
-                                    transition: "all 0.3s"
+                                    fontWeight: "600"
                                 }}>
                                     Login
                                 </button>
@@ -174,8 +161,7 @@ export default function AppLayout({ children }) {
                                     borderRadius: "8px",
                                     cursor: "pointer",
                                     fontWeight: "600",
-                                    boxShadow: "0 4px 15px rgba(255, 165, 0, 0.4)",
-                                    transition: "all 0.3s"
+                                    boxShadow: "0 4px 15px rgba(255,165,0,0.4)"
                                 }}>
                                     Register
                                 </button>
@@ -185,7 +171,6 @@ export default function AppLayout({ children }) {
                 </div>
             </nav>
 
-            {/* Main Content - NO PADDING! */}
             <main style={{ margin: 0, padding: 0 }}>
                 {children}
             </main>
